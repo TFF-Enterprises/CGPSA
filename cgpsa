@@ -391,7 +391,7 @@ sub process_file
         { 
             debug(9, "Processing CGP header line: $line");
             # if we're in the headers, read an address
-            if (($line =~ /^R/) && ($line =~ /<(\S*)>/))
+            if (($line =~ /^R\ W/) && ($line =~ /<(\S*)>/))
             {   
                 # a recipient
                 my $raw_recipient = $1;
