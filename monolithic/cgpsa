@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.5a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.5a2
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,7 +79,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.5a1";
+our $VERSION = "1.0.5a2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -126,9 +126,8 @@ if ($conf->{use_cli})
     if ($@)
     {
       # OK, it's not anywhere...
-      print("* Error: Current CGPSA configuration requires CGP::CLI ".
-            "module. Exiting.\n");
-      exit();
+      die "* Error: Current CGPSA configuration requires CGP::CLI ".
+          "module. Exiting.");
     }
   }
 }
@@ -141,10 +140,17 @@ if ($conf->{use_cli})
 $ENV{'HOME'} = $conf->{default_home_dir}; 
 $ENV{'PATH'} = "";
 
-mkdir("$ENV{'HOME'}", 0700)
-  or die "* Error: Can't create default home directory $ENV{'HOME'}";
-mkdir("$ENV{'HOME'}/.spamassassin", 0700)
-  or die "* Error: Can't create directory $ENV{'HOME'}/.spamassassin";
+if (!(-rwxd $conf->{default_home_dir}))
+{
+  mkdir("$ENV{'HOME'}", 0700)
+    or die "* Error: Can't create default home directory $ENV{'HOME'}";
+}
+
+if (!(-rwxd $conf->{default_home_dir}."/.spamassassin"))
+{
+  mkdir("$ENV{'HOME'}/.spamassassin", 0700)
+    or die "* Error: Can't create directory $ENV{'HOME'}/.spamassassin";
+}
 
 # Create a SpamAssassin, using the configuration parameters we've
 # read and the system defaults.
