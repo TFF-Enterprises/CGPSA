@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2.6</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2.7</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -38,8 +38,8 @@ from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) 
 version is
 <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_6.tgz">1.2.6</a>,
-released 26 December 2003. There is currently no beta release
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a>,
+released ? December 2003. There is currently no beta release
 available.</p>
 
 <h2>Documentation</h2>
@@ -355,6 +355,19 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - ? December 2003</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed documentation of "direct_mailbox_rewrite" to indicate that the
+rewrite happens before the decision to scan mail rather than after (and that
+therefore, if "direct_mailbox_rewrite" is on, "direct_mailbox_scan" is 
+superfluous).</li>
+<li>Fixed direct mailbox address processing. Previously, the "direct_mailbox_rewrite" option would have caused mail to bounce, because instead of rewriting the address "mailbox#account@domain" as "account+mailbox@domain", it would rewrite it as "mailbox+account@domain".</li> 
+<li>Fixed a problem where a log entry did not get properly pluralized when
+necessary.</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_6.tgz">1.2.6</a> - 26 December 2003</dt>
 <dd>
 <p>Bug Fixes</p>

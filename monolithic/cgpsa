@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.6
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.7
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -91,7 +91,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.6";
+our $VERSION = "1.2.7";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1063,6 +1063,7 @@ sub process_file
           
           my $module = $data->[0];
           my $host = $data->[1];
+          my $dma_mailbox = $data->[2];
           $data = undef;
           
           if ($cli->isSuccess) 
@@ -1075,15 +1076,23 @@ sub process_file
               
               my $local_address = $raw_recipient;
               
-              if ($conf->{direct_mailbox_rewrite})
+              if ($conf->{direct_mailbox_rewrite} &&
+                  ($dma_mailbox ne ""))
               {
-                # if there's direct mailbox addressing, we need to 
-                # replace it by account detail. we just replace the
-                # first "#" in the address by "+"; this is safe,
-                # because anything after the "+" is considered
-                # part of the account detail.
-                
-                $local_address =~ s/#/\+/;
+                # there's direct mailbox addressing, and we're supposed 
+                # to replace it by account detail. 
+              
+                if ($local_address =~ /^(\S*)#(\S*)@(\S*)$/)
+                {
+                  # it's in a secondary domain
+                  $local_address = $2."+".$1."@".$3;
+                }
+                elsif ($local_address =~ /^(\S*)#(\S*)$/)
+                {
+                  # it's in the main domain
+                  $local_address = $2."+".$1;
+                }
+  
                 debug(8, "Rewrote DMA as account detail: $local_address");
               }
               
@@ -1097,7 +1106,7 @@ sub process_file
                          "ADDHEADER mode for all recipients");
                 $all_destination = 1;
               }
-              elsif (($raw_recipient =~ /(\S*)#(\S*)/) &&
+              elsif (($local_address =~ /(\S*)#(\S*)/) &&
                       !$conf->{direct_mailbox_scan})
               {
                 # there's DMA, so this is a "remote" address
@@ -1270,7 +1279,7 @@ sub process_file
     if ($#local_addresses_default >= 0)
     {
       my $plural = "";
-      if ($#local_addresses_default > 1)
+      if (scalar(@local_addresses_default) > 1)
       {
         $plural = "es";
       }
