@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.5a5
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.5
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,7 +79,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.5a5";
+our $VERSION = "1.0.5";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -102,7 +102,7 @@ my %cnf;
 our $conf;
 $conf = \%cnf;
 
-print("* Reading configuration file ".$config_pathname."\n");
+print("* Loading Configuration File ".$config_pathname."\n");
 readConfigFile($conf, $config_pathname);
 if ($conf->{no_configuration})
 {
@@ -142,6 +142,34 @@ if ($conf->{use_cli})
       die "* Error: Current CGPSA configuration requires CGP::CLI ".
           "module. Exiting.";
     }
+    
+    my $cli = new CGP::CLI
+      ({ PeerAddr => $conf->{cgp_hostname},
+         PeerPort => $conf->{cgp_port},
+         login    => $conf->{cgp_username},
+         password => $conf->{cgp_password}
+       });
+     
+    if (!$cli) 
+    {
+      die "* Error: Could not connect to CommuniGate Pro CLI. Exiting.";
+    }
+    
+    # Check to see if the installed CommuniGate supports the "mail"
+    # extension the routing CLI command.
+    
+    my $data=$cli->Route("postmaster MAIL");
+    if ($cli->isSuccess)
+    {
+      # Support for the extension
+      $conf->{route_mail_extension} = 1;
+    }
+    else
+    {
+      # No support for the extension
+      $conf->{route_mail_extension} = 0;
+    }
+    $cli->Logout();
   }
 }
 
@@ -209,12 +237,8 @@ if (!$conf->{use_user_prefs})
 $spamassassin->compile_now(0);
 $/ = "\n";      # argh, Razor resets this!  Bad Razor! (from spamd.raw)
 
-# Clean up the temp directories we used.
-# to be removed in 1.0.5, perhaps
-#unlink <$ENV{'HOME'}/.spamassassin/*>,<$ENV{'HOME'}/*>;
-#rmdir "$ENV{'HOME'}/.spamassassin";
-#rmdir $ENV{'HOME'};
-#delete $ENV{'HOME'};
+print("* Using SpamAssassin Version ".Mail::SpamAssassin::Version().
+      " ($Mail::SpamAssassin::SUB_VERSION)\n");
 
 # Clean up any old lock file that might exist.
 
@@ -546,7 +570,22 @@ sub process_file
   my ($return_path, @local_addresses_custom, @account_dirs_custom,
       @local_addresses_default, @remote_addresses, @msglines, $cgp_header);
     
-  # Log in to the CommuniGate Pro CLI, if necessary
+  # ensure the queue file exists
+  
+  chomp($filename);
+  if (!$conf->{absolute_queue_filenames}) 
+  {
+    $filename = our $cgp_base.$filename;
+  };
+  
+  if (!(-e $filename))
+  {
+    debug(1, "Queue file $filename doesn't exist");
+    printResult("OK");
+    return;
+  }
+ 
+   # Log in to the CommuniGate Pro CLI, if necessary
   
   my $cli = undef;
   
@@ -561,27 +600,14 @@ sub process_file
      
     if (!$cli) 
     {
-      printResult("FAILURE Could not connect to CLI.");
+      printResult("FAILURE");
+      debug(1, "Could not connect to CLI.");
       return;
     }
   }
   
-  # At this point, if $cli is undef, we know we're not using it
-      
-  chomp($filename);
-  if (!$conf->{absolute_queue_filenames}) 
-  {
-    $filename = our $cgp_base.$filename;
-  };
-  
-  if (!(-e $filename))
-  {
-    debug(1, "Queue file $filename doesn't exist");
-    printResult("OK");
-    return;
-  }
-  
-  # Open the File
+  # At this point, if $cli is undef, we know we're not using it... 
+  # In any event, open the message file!
   
   open (MSGFILE, "$filename");
   
@@ -608,7 +634,15 @@ sub process_file
         
         if ($cli)
         {
-          my $data=$cli->Route("\"$1\"");
+          my $data; 
+          if ($conf->{route_mail_extension})
+          {
+            $data = $cli->Route("\"$1\" MAIL");
+          }
+          else
+          {
+            $data = $cli->Route("\"$1\"");
+          }
           debug(9, "Recipient, Result from CLI: ".
                    $data->[0].",".$data->[1].",".$data->[2]);
           if ($cli->isSuccess) 
@@ -636,6 +670,17 @@ sub process_file
                 $username =~ s/@\S*//g;
                 $local_address = 
                   $username.$account_detail.$hostname;
+              }
+              elsif ($data->[1] eq "*@*")
+              {
+                # it's the special "alldomains" address
+                $local_address = "alldomains";
+              }
+              elsif ($data->[1] =~ /^\*(\S*)/)
+              {
+                # replace a leading "*" with "all" - it's an
+                # all@ address
+                $local_address = "all".$1;
               }
               elsif ($data->[2] =~ /#(\S*)/)
               {
@@ -840,7 +885,7 @@ sub process_file
   # Log out of the CommuniGate Pro CLI, if necessary.
   if ($cli)
   {
-    $cli->Logout;
+    $cli->Logout();
   }
 }
 
@@ -881,7 +926,8 @@ sub readConfigFile
   $conf->{stop_at_threshold} = 0;
   $conf->{use_c_locale} = 1;
   $conf->{absolute_queue_filenames} = 0;
-  
+ #$conf->{route_mail_extension} set at runtime initialization
+ 
   my @text = (<IN>);
   close(IN);
 
