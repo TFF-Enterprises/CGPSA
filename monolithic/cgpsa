@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.3
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.4a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,7 +79,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.3";
+our $VERSION = "1.0.4a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -420,9 +420,9 @@ sub checkMessage
 
   # Let's do SpamAssassin!
   
-  $mail->replace_header($conf->{loop_prevention_header}, "Attempted");
   $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
-  $mail->replace_header("X-Spam-Status", "SpamAssassin Failed");
+# This is unnecessary and will likely be removed from 1.0.4.
+#  $mail->replace_header("X-Spam-Status", "SpamAssassin Failed");
   
   if ($conf->{use_user_prefs})
   {
@@ -471,10 +471,16 @@ sub checkMessage
   {
     # Something bad happened with SpamAssassin
     
+    $mail->replace_header($conf->{loop_prevention_header}, "Scan Failed");
+
     debug(5, "SpamAssassin failed for $account_name in ".
              sprintf("%.1f", time - $start)." seconds");
   }
-  
+  else
+  {
+    $mail->replace_header($conf->{loop_prevention_header}, "Scanned");
+  }
+    
   my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
   return $rewritten_msg;
 }
@@ -589,7 +595,7 @@ sub process_file
                 # there was DMA, now stored in $1
                 my $direct_mailbox = $1;
                 
-                if ($conf->{direct_mailbox_passthrough})
+                if (!$conf->{direct_mailbox_rewrite})
                 {
                   # we must preserve the DMA
                   $local_address = 
@@ -607,7 +613,7 @@ sub process_file
                   $username =~ s/@\S*//g;
                   $local_address = 
                     $username."+".$direct_mailbox.$hostname;
-                  debug(8, "Converted DMA into account ".
+                  debug(8, "Rewrote DMA as account ".
                            "detail: $local_address");
                 }   
               }
@@ -616,11 +622,12 @@ sub process_file
                 $local_address = $data->[1];
               }
               
-              if ($local_address =~ /(\S*)#(\S*)/)
+              if (($local_address =~ /(\S*)#(\S*)/) &&
+                  !$conf->{direct_mailbox_scan})
               {
                 # there's DMA, so this is a "remote" address
                 debug(8, "Using direct mailbox addressing for ".
-                         $local_address);
+                         $local_address. " (no scan)");
                 push(@remote_addresses, $local_address);
               }
               else
@@ -814,7 +821,8 @@ sub readConfigFile
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;
   $conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
-  $conf->{direct_mailbox_passthrough} = 1;
+  $conf->{direct_mailbox_scan} = 0;
+  $conf->{direct_mailbox_rewrite} = 0;
   $conf->{debug} = 1;
   $conf->{debug_level} = 9;
   $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
@@ -863,9 +871,13 @@ sub readConfigFile
     {
       $conf->{loop_prevention_header} = $1;
     }
-    elsif ($line =~ /^direct[-_]mailbox[-_]passthrough[\s\=]+(\S+)$/) 
+    elsif ($line =~ /^direct[-_]mailbox[-_]scan[\s\=]+(\S+)$/) 
     {
-      $conf->{direct_mailbox_passthrough} = evaluateBoolean($1);
+      $conf->{direct_mailbox_scan} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^direct[-_]mailbox[-_]rewrite[\s\=]+(\S+)$/)
+    {
+      $conf->{direct_mailbox_rewrite} = evaluateBoolean($1);
     }
     elsif ($line =~ /^debug[\s\=]+(\S+)$/) 
     {

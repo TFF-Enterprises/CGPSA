@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.3</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.4</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -34,7 +34,7 @@ configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
-<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.3, released 30 March 2003.</p>
+<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.4, released 1 April 2003.</p>
 <p>There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
@@ -108,7 +108,7 @@ on your system. If you can't get it working, ask for help (as
 described below in <a href="#bugs">Bug Reports, Feature Requests and
 the Like</a>).</p>
 
-<p>As of Version 1.0.3, CGPSA is known to work on Windows 2000 with
+<p>As of Version 1.0.4, CGPSA is known to work on Windows 2000 with
 ActiveState Perl 5.6.1. It is likely that it will work on other Win32
 operating systems as well. Throughout the following steps, there are
 special instructions for Win32 systems.</p>
@@ -207,7 +207,7 @@ and save your changes.<br/><br/></li>
 <li>Examine the CommuniGate Pro log for the current day, and search
 for the string you entered as the filter's name in the previous
 step. You should see a line that reads similar to the following: "*
-TFF Enterprises CGPSA Filter 1.0.3 Ready". If you do not see this line,
+TFF Enterprises CGPSA Filter 1.0.4 Ready". If you do not see this line,
 wait a few seconds and look again. If you still do not see it after a
 minute or so, something went wrong and there will likely be an error
 message in the log. If you can make sense of it and fix the problem,
@@ -287,6 +287,13 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt>1.0.4 - 1 April 2003</dt>
+<dd>
+<ul>
+<li>Fixed a problem that occurred with SpamAssassin's "report_safe" option turned on, where an email identified as spam would be processed in an infinite loop.</li>
+<li>Added the "direct_mailbox_rewrite" and "direct_mailbox_scan" configuration options, and removed the "direct_mailbox_passthrough" configuration option. This allow for more flexibility when determining the scanning policy for direct mailbox addresses.</li>
+</ul>
+</dd>
 <dt>1.0.3 - 30 March 2003</dt>
 <dd>
 <ul>
@@ -349,7 +356,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-30 March 2003<br />
+1 April 2003<br />
 </address>
 </body>
 </html>
