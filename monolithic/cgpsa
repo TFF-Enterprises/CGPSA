@@ -772,14 +772,20 @@ sub checkMessage
     
   eval 
   {
-    # Remove any existing SpamAssassin markup from the message...
-    
-    $mail->replace_original_message
-      ($spamassassin->remove_spamassassin_markup($mail));
-
     if (my $status = $spamassassin->check($mail))
     {
       $mail->replace_original_message([@$msg_ptr]);
+
+      # Remove any existing SpamAssassin headers from the message...
+      
+      $mail->delete_header("X-Spam-Status");
+      $mail->delete_header("X-Spam-Flag");
+      $mail->delete_header("X-Spam-Checker-Version");
+      $mail->delete_header("X-Spam-Prev-Content-Type");
+      $mail->delete_header("X-Spam-Prev-Content-Transfer-Encoding");
+      $mail->delete_header("X-Spam-Report");
+      $mail->delete_header("X-Spam-Level");
+    
       $status->rewrite_mail;
   
       my $was_it_spam;
