@@ -154,7 +154,7 @@ while ($request)
             
         if ($command =~ /INTF/i) 
         {
-            # CGPro wants to know our interface version (it's 2). We don't
+            # CGPro wants to know our interface version (it's 1). We don't
             # really care what CGPro's interface version is, since all we
             # do is DISCARD or OK messages.
             printResult("INTF 1");
