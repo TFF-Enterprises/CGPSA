@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2.1</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -37,8 +37,8 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
 tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
 <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a>,
-released 17 September 2003. There is currently no beta release
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a>,
+released 2 October 2003. There is currently no beta release
 available.</p>
 
 <h2>Documentation</h2>
@@ -354,9 +354,18 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a> - 2 October 2003</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed an issue where we inserted a duplicate X-Spam-Checker-Version header under SpamAssassin 2.6 in headers-only mode.</li>
+<li>Fixed an issue where we sometimes, while trying to get rid of SpamAssassin headers from other servers, ended up duplicating our own SpamAssassin headers.</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a> - 17 September 2003</dt>
 <dd>
 <p>Changes</p>
+<ul>
 <li>Perl 5.6.0 or higher is now required to run CGPSA (this was
 unintentionally the case before, but CGPSA will die with a much more 
 intuitive message now)</li>
@@ -378,6 +387,7 @@ CGPSA.</li>
 <ul>
 <li>Same as for Version 1.1.</li>
 </ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_1.tgz">1.1</a> - 27 July 2003</dt>
 <dd>
 <p>Changes</p>
@@ -575,7 +585,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-17 September 2003<br />
+2 October 2003<br />
 </address>
 </body>
 </html>

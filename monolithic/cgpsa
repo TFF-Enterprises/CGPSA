@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -42,6 +42,7 @@
 # filter to work at all.
 
 # CGPSA requires Perl 5.6.0 or higher to run.
+
 require 5.6.0;
 
 #
@@ -54,7 +55,11 @@ require 5.6.0;
 # among other things, for finding the configuration file and the
 # Submitted directory. It must have a trailing "/".
 
+# Unix
 our $cgp_base = "/var/CommuniGate/";
+
+# Windows
+#our $cgp_base = "c:/CommuniGate Files/";
 
 # Location for the directory containing the configuration and lock files, 
 # relative to the CommuniGate Pro base directory. It must have a trailing
@@ -85,7 +90,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.1a1";
+our $VERSION = "1.2.1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
