@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b3c1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b3
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b3c1";
+our $VERSION = "1.3b3";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -674,7 +674,6 @@ sub submitMessage
     {
       $domain_name = $1;
     }
-    my $domain_conf = $domain_conf_cache{$domain_name};
     my $user_conf = $user_conf_cache{$account_name};
     my $receiver_address = "";
   
@@ -718,6 +717,10 @@ sub submitMessage
                      $address);
           }
         }
+      }
+      else
+      {
+        debug(9, "Could not determine if DMA enabled on server");
       }
     }
   }
