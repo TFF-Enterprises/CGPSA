@@ -516,59 +516,59 @@ sub checkCLI
         # OK, it's not anywhere...
         error_exit("Current CGPSA configuration requires CGP::CLI module.");
       }
-      
-      debug(1, "Checking for CommuniGate Pro CLI Access");
-      
-      my $attempts = 0;
-      my $cli = undef;
-      
-      while (!$cli)
-      {
-        $cli = new CGP::CLI
-          ({ PeerAddr => $conf->{cgp_hostname},
-             PeerPort => $conf->{cgp_port},
-             login    => $conf->{cgp_username},
-             password => $conf->{cgp_password}
-           });
-       
-         if (!$cli)
-         {
-           debug(1, "Could not connect to CLI (Error: ".
-                    $CGP::ERR_STRING.")");
-           $attempts = $attempts + 1;
-           if ($attempts < 3)
-           {
-             debug(1, "Sleeping for 20 seconds before next attempt");
-             sleep 20;
-           }
-           else
-           {
-             debug(1, "Too many failed attempts");
-             error_exit("Could not connect to CLI. Exiting.");
-           }
-         }
-      }
-      
-      # Check to see if the installed CommuniGate supports the "mail"
-      # extension the routing CLI command.
-      
-      my $data=$cli->Route("postmaster MAIL");
-      if ($cli->isSuccess)
-      {
-        # Support for the extension
-        $conf->{route_mail_extension} = 1;
-        debug(9, "CLI supports ROUTE ... MAIL extension");
-      }
-      else
-      {
-        # No support for the extension
-        $conf->{route_mail_extension} = 0;
-        debug(9, "CLI does not support ROUTE ... MAIL extension");
-      }
-      
-      $cli->Logout();
-      undef $cli;
     }
+    
+    debug(1, "Checking for CommuniGate Pro CLI Access");
+    
+    my $attempts = 0;
+    my $cli = undef;
+    
+    while (!$cli)
+    {
+      $cli = new CGP::CLI
+        ({ PeerAddr => $conf->{cgp_hostname},
+           PeerPort => $conf->{cgp_port},
+           login    => $conf->{cgp_username},
+           password => $conf->{cgp_password}
+         });
+     
+       if (!$cli)
+       {
+         debug(1, "Could not connect to CLI (Error: ".
+                  $CGP::ERR_STRING.")");
+         $attempts = $attempts + 1;
+         if ($attempts < 3)
+         {
+           debug(1, "Sleeping for 20 seconds before next attempt");
+           sleep 20;
+         }
+         else
+         {
+           debug(1, "Too many failed attempts");
+           error_exit("Could not connect to CLI. Exiting.");
+         }
+       }
+    }
+    
+    # Check to see if the installed CommuniGate supports the "mail"
+    # extension the routing CLI command.
+    
+    my $data=$cli->Route("postmaster MAIL");
+    if ($cli->isSuccess)
+    {
+      # Support for the extension
+      $conf->{route_mail_extension} = 1;
+      debug(9, "CLI supports ROUTE ... MAIL extension");
+    }
+    else
+    {
+      # No support for the extension
+      $conf->{route_mail_extension} = 0;
+      debug(9, "CLI does not support ROUTE ... MAIL extension");
+    }
+    
+    $cli->Logout();
+    undef $cli;
   }
 }
 
