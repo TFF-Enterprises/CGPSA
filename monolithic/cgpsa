@@ -802,6 +802,31 @@ sub checkMessageAddHeader
       $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
       $newheaders .= $conf->{loop_prevention_header}.": Scanned\e";
       
+      if ((length $newheaders) > 4096)
+      {
+        # the headers are too long, let's cut them down to the 
+        # bare essentials
+        
+        if ($status->is_spam())
+        {
+          $newheaders = 
+            "X-Spam-Status: Yes, hits=".int($status->{hits})."\e";
+          $newheaders .= "X-Spam-Flag: YES\e";
+        }
+        else
+        {
+          $newheaders = 
+            "X-Spam-Status: No, hits=".int($status->{hits})."\e";
+        }
+        
+        $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
+                       Mail::SpamAssassin::Version().
+                       " ($Mail::SpamAssassin::SUB_VERSION)\e";
+        $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
+        $newheaders .= $conf->{loop_prevention_header}.
+                       ": Scanned, Headers Truncated\e";
+      }
+      
       $status->finish();
       $mail->finish();
     }
@@ -1350,7 +1375,7 @@ sub readConfigFile
     {
       $conf->{parallel_requests} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^max[-_]requests[\s\=]+([0-9]+)\s+$/) 
+    elsif ($line =~ /^max[-_]requests[\s\=]+(\d+)$/) 
     {
       $conf->{max_requests} = scalar($1);
       if ($conf->{max_requests} < 0)
@@ -1392,9 +1417,9 @@ sub readConfigFile
     {
       $conf->{debug} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^debug[-_]level[\s\=]+([0-9])\s+$/) 
+    elsif ($line =~ /^debug[-_]level[\s\=]+(\d+)$/) 
     {
-      $conf->{debug_level} = scalar($1);
+      $conf->{debug_level} = $1;
     }
     elsif ($line =~ /^sa[-_]debug[\s\=]+(.+)$/)
     {
