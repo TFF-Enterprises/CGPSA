@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.2</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -34,7 +34,7 @@ configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
-<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.1, released 27 March 2003.</p>
+<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.2, released 27 March 2003.</p>
 <p>There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
@@ -155,7 +155,7 @@ enabled, you must create a CommuniGate Pro account with PWD access (as
 described in the configuration file). Use the username and password
 specified in your <code>cgpsa.conf</code>. Enable a sufficient number
 of PWD connections for the number of enqueuer threads used by your
-server. See the configuration file for details. If you are running in headers-only mode, or in full-featured mode without the CLI, you need not install the CLI module.<br/><br/></li>
+server. See the configuration file for details. If you are running in headers-only mode, or in full-featured mode without the CLI, you need not create an account for PWD access.<br/><br/></li>
 
 <li>Create the "default home directory", whose path is set in the
 configuration file (<code>cgpsa.conf</code>). This is where the
@@ -217,15 +217,14 @@ much of it isn't too useful).</p>
 
 <h3 id="disclaimer">Disclaimer</h3>
 
-<p>This is the first public release of CGPSA. As such it is possible
-that it contains bugs, although it has already been in use for months
-in production systems. Any bugs that might exist in CGPSA are unlikely
-to cause the loss of email, because CommuniGate Pro is very
-intelligent about how it works with external filters - when a filter
-fails, the message stays enqueued. However, it is <em>possible</em>
-that email could be lost. There is no warranty, express or implied,
-associated with CGPSA; we will not be liable for any lost email. Use
-at your own risk.</p>
+<p>It is possible that CGPSA contains bugs, although it has already been
+in use for months in production systems and we consider it relatively
+stable. Any bugs that might exist in CGPSA are unlikely to cause the
+loss of email, because CommuniGate Pro is very intelligent about how it
+works with external filters - when a filter fails, the message stays
+enqueued. However, it is <em>possible</em> that email could be lost.
+There is no warranty, express or implied, associated with CGPSA; we will
+not be liable for any lost email. Use at your own risk.</p>
 
 <hr/>
 
@@ -266,6 +265,14 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt>1.0.2 - 27 March 2003</dt>
+<dd>
+<ul>
+<li>Fixed a problem where the CGP CLI module wouldn't load properly if it wasn't found as "CGP/CLI.pm".</li>
+<li>Fixed a problem where, under certain circumstances, Perl's Taint Mode (security infrastructure) prevented CGPSA from removing some temporary files used in SpamAssassin initialization.</li>
+<li>Fixed a non sequitur in the documentation.</li>
+</ul>
+</dd>
 <dt>1.0.1 - 27 March 2003</dt>
 <dd>
 <ul>
