@@ -80,11 +80,12 @@ our $lock_pathname = $cgp_base.$root_config_directory."cgpsa.lock";
 our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 
 # Path components for domain configuration files. The domain prefix is
-# the path up to the domain name, including a trailing "/". The domain
-# suffix is the path to a domain configuration file starting after the
-# domain name, including a leading "/".
+# the path up to the domain name, including a trailing "/"; it is only
+# used in cases where the domain location cannot be determined from the CLI.
+# The domain suffix is the path to a domain configuration file starting 
+# after the domain name, including a leading "/".
 
-our $domain_prefix = $cgp_base."Domains/";
+our $legacy_domain_prefix = $cgp_base."Domains/";
 our $domain_config_filename = "cgpsa.domainconf";
 our $domain_config_suffix = 
     "/".$domain_config_directory.$domain_config_filename;
@@ -156,6 +157,7 @@ print("* TFF Enterprises CGPSA Filter $VERSION Starting\n");
 our %root_conf_hash = ();
 our $root_conf = \%root_conf_hash;
 our %domain_conf_cache = ();
+our %domain_dir_cache = ();
 our %user_conf_cache = ();
 our @scan_domains = undef;
 our $spamassassin = undef;
@@ -227,6 +229,7 @@ sub processHUP
   undef our %root_conf_hash;
   undef our $root_conf;
   undef our %domain_conf_cache;
+  undef our %domain_dir_cache;
   undef our %user_conf_cache;
   
   initialize();
@@ -243,12 +246,17 @@ sub processHUP
 
 sub initialize
 {
+  our %domain_dir_cache;
   our $root_config_pathname;
   our $root_conf;
   our $VERSION;
   our $sa_prefs_dir_suffix;
   our $sa_prefs_suffix;
   
+  # The path to the "" domain is always "Accounts"
+
+  $domain_dir_cache{""} = "Accounts";
+
   print("* Loading Configuration File ".$root_config_pathname."\n");
   loadRootConfig();
   if ($root_conf->{no_configuration})
@@ -797,31 +805,15 @@ sub getUserInformation
   my $cli = ${$cli_ptr};
   my $account_dir = $cli->GetAccountLocation($account_name);
   my $domain_name = "";
-  my $domain_dir = "Accounts";
   
   if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
   }
   
-  # see if domain directory exists, and if so, what it is (if the
-  # domain is "", the directory is "Accounts" because it's the root
-  # directory).
-  
-  if ($domain_name ne "")
-  {
-    $domain_dir = $cli->GetDomainLocation($domain_name);
-    if (!$domain_dir)
-    {
-      # the CLI call failed, so we'll do this the old-fashioned way
-      
-      $domain_dir = "Domains/".$domain_name;
-    }
-  }
-    
   # construct the full path to the account directory
   
-  $account_dir = $cgp_base.$domain_dir."/".$account_dir;
+  $account_dir = $cgp_base.$domain_dir_cache{$domain_name}."/".$account_dir;
 
   # get the user's configuration (this also loads the domain's configuration
   # because it needs it to do the configuration inheritance).
@@ -1360,6 +1352,7 @@ sub process_file
   our $seqnum;
   our $root_conf;
   our %domain_conf_cache;
+  our %domain_dir_cache;
   our %user_conf_cache;
   my $filename = shift;
   my $return_path = "";
@@ -1480,6 +1473,22 @@ sub process_file
               {
                 $domain_name = $1;
               }
+              
+              if (!$domain_dir_cache{$domain_name})
+              {
+                # we don't know the domain directory for this domain, so...
+                
+                my $domain_dir = $cli->GetDomainLocation($domain_name);
+                if (!$domain_dir)
+                {
+                  # CLI call failed, so we'll do this the old-fashioned way
+      
+                  $domain_dir = $legacy_domain_prefix.$domain_name;
+                }
+                
+                $domain_dir_cache{$domain_name} = $domain_dir;
+              }
+              
               loadDomainConfig($domain_name);
               $domain_conf = $domain_conf_cache{$domain_name};
               
@@ -2026,8 +2035,10 @@ sub loadDomainConfig
   my $domain_name = shift;
   my $print_domain_name = $domain_name;
   my %conf = ();
+  my $domain_dir = "";
   our %root_conf_hash;
   our %domain_conf_cache;
+  our %domain_dir_cache;
   our $root_conf;
   
   if (!(exists $domain_conf_cache{$domain_name}))
@@ -2051,8 +2062,9 @@ sub loadDomainConfig
     
       if ($domain_name ne "")
       {
+        
         readConfigFile
-          (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
+          (\%conf, $domain_dir_cache{$domain_name}.$domain_config_suffix);
       }
       else
       { 
