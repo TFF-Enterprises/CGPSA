@@ -39,7 +39,7 @@ http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is
 <a
 href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_4.tgz">1.2.4</a>,
-released ?? ?? 2003. There is currently no beta release
+released 3 December 2003. There is currently no beta release
 available.</p>
 
 <h2>Documentation</h2>
@@ -111,7 +111,7 @@ messages to remote servers.</p>
 <p>CGPSA requires the following in order to run:</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
-<li>Perl version 5.6.0 or higher (5.6.1 or higher preferred)</li>
+<li>Perl version 5.6.1 or higher</li>
 <li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.5 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
@@ -355,7 +355,7 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_4.tgz">1.2.4</a> - ?? ?? 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_4.tgz">1.2.4</a> - 3 December 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -364,7 +364,8 @@ additional headers longer than 4096 characters in headers-only mode.</li>
 <li>Fixed the reading of numeric settings (such as "max_requests" and 
 "debug_level") from the configuration file.</li>
 <li>Fixed a bug where a data structure that tracked child processes could
-potentially grow without bound.</li>
+potentially grow without bound. This is likely what caused CPU and memory
+usage explosions in previous versions of CGPSA.</li>
 <li>Added a configuration option to turn on SpamAssassin's internal 
 debugging (it is off by default).</li>
 </ul>
@@ -629,7 +630,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-2 December 2003<br />
+3 December 2003<br />
 </address>
 </body>
 </html>
