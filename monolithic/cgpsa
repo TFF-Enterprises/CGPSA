@@ -288,7 +288,7 @@ sub loadPreferences
       local_tests_only => !($conf->{do_network_tests}),
       stop_at_threshold => $conf->{stop_at_threshold},
       home_dir_for_helpers => $conf->{helper_state_dir},
-      userstate_dir => $conf->{default_home_dir},
+      userstate_dir => $conf->{default_home_dir}."/.spamassassin",
       debug => $conf->{sa_debug},
       PREFIX => $conf->{sa_prefix},
       DEF_RULES_DIR => $conf->{sa_default_rules_dir},
