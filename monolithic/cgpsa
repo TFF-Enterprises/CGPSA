@@ -323,6 +323,24 @@ sub loadPreferences
   print("* Using SpamAssassin Version ".Mail::SpamAssassin::Version().
         " ($Mail::SpamAssassin::SUB_VERSION)\n");
   
+  if ($conf->{sa_prefix} ne "")
+  {
+    print("* Custom SpamAssassin Installation Prefix: \n*     ".
+          $conf->{sa_prefix});
+  }
+  
+  if ($conf->{sa_default_rules_dir} ne "")
+  {
+    print("* Custom SpamAssassin Default Rules Directory: \n*     ".
+          $conf->{sa_default_rules_dir});
+  }
+  
+  if ($conf->{sa_local_rules_dir} ne "")
+  {
+    print("* Custom SpamAssassin Local Rules Directory: \n*     ".
+          $conf->{sa_local_rules_dir});
+  }
+  
   print("* Default SpamAssassin Settings Location: \n");
   if (-e "$conf->{default_home_dir}/.spamassassin/user_prefs")
   {
