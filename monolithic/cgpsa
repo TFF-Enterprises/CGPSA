@@ -208,7 +208,7 @@ sub loadPreferences
   if ($conf->{max_requests} > 0)
   {
     print("* Max Requests: $conf->{max_requests} - Be sure Auto-Restart ". 
-          "is enabled in CGP Helper Settings.\n");
+          "is not disabled in CGP Helper Settings.\n");
   }
   
   # Redirect standard error to a file, if option is set.
@@ -401,15 +401,6 @@ sub mainLoop
             # We're a finished child process, so we must...
             exit();
           }
-          elsif (($conf->{max_requests} > 0) && 
-                 ($request_count >= $conf->{max_requests}))
-          {
-            lockStandardOutput();
-            print("* Handled maximum number of requests (".
-                  $conf->{max_requests}.", exiting.\n");
-            unlockStandardOutput();
-            last;
-          }
         }
         else 
         {
@@ -431,7 +422,17 @@ sub mainLoop
         printResult("OK");
       }
     }
-      
+
+    if (($conf->{max_requests} > 0) && 
+        ($request_count >= $conf->{max_requests}))
+    {
+      lockStandardOutput();
+      print("* Handled maximum number of requests (".
+            $conf->{max_requests}.", exiting.\n");
+      unlockStandardOutput();
+      last;
+    }
+                
     $request = <STDIN>;
   }
   
@@ -1404,14 +1405,6 @@ sub readConfigFile
     $conf->{use_user_prefs} = 0;
     $conf->{require_user_prefs} = 0;
     $conf->{use_user_state} = 0;
-  }
-  
-  # If we're in "parallel requests" mode, change other settings
-  # appropriately.
-  
-  if ($conf->{parallel_requests})
-  {
-    $conf->{max_requests} = 0;
   }
 }
 
