@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3.3</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3.4</h1>
 <h2>Copyright &copy; 2002-2004 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -38,10 +38,10 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_3.tgz">1.3.3</a>, 
-released 19 June 2004.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_4.tgz">1.3.4</a>, 
+released 5 August 2004.</p>
 
-<p>The current testing version of CGPSA is 1.4a2, released 19 June 2004. It 
+<p>The current testing version of CGPSA is 1.4a3, released 5 August 2004. It 
 is available from the <a href="http://www.tffenterprises.com/cgpsa/beta/">beta documentation page</a>. Note that it is designated as an alpha release; this reflects the
 fact that the feature set for the 1.4 release has not been finalized.</p>
 
@@ -97,7 +97,7 @@ the web directory corresponding to the account
 (<code>username.macnt/account.web</code>), and individual user CGPSA
 preferences are located in a <code>.cgpsa.conf</code> file within the
 same directory; domain CGPSA preferences are located in a
-<code>cgpsa.conf</code> file inside the domain's <code>Settings</code>
+<code>cgpsa.domainconf</code> file inside the domain's <code>Settings</code>
 directory, which can, among other things, specify the location to find
 the domain's SpamAssassin preeferences and state files.</p>
 
@@ -175,10 +175,15 @@ later.<br/><br/></li>
 any of the settings you want to change - they are all well documented in
 the configuration file itself.<br/><br/></li>
 
-<li>Install customized copies of the <code>cgpsa.conf</code> configuration file into the <code>Settings</code> subdirectories of all secondary domains (<i>e.g.</i>, <code>/var/CommuniGate/Domains/mydomain.com/Settings</code>) for which you want customized CGPSA settings. You can modify any settings
-you choose in this file, but only those that explicitly indicate that they can be overridden at the domain level will be used. Also note that domain 
-settings will only be used if CLI usage is enabled (see the next step for
-details).<br/><br/></li>
+<li>Install customized <code>cgpsa.domainconf</code> configuration files
+into the <code>Settings</code> subdirectories of all domains
+(<i>e.g.</i>,
+<code>/var/CommuniGate/Domains/mydomain.com/Settings</code>) for which
+you want customized CGPSA settings. You can modify any settings you
+choose in this file, but only those that explicitly indicate that they
+can be overridden at the domain level will be used. Also note that
+domain settings will only be used if CLI usage is enabled (see the next
+step for details).<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must install the <a
@@ -223,7 +228,7 @@ listening.<br/><br/></li>
 configuration file (<code>cgpsa.conf</code>). This is where the default
 SpamAssassin preferences and state files will be stored - that is, those
 that are used in the absence of individual user preferences. If you have
-created customized settings for secondary domains, and they have their
+created customized settings for domains, and they have their
 own default home directory paths, create those directories as
 well.<br/><br/></li>
 
@@ -235,7 +240,7 @@ system using SpamAssassin, you can just use SpamAssassin's
 preferences. Otherwise, create a <code>.spamassassin</code> subdirectory
 inside the default home directory, containing a <code>user_prefs</code>
 file with the SpamAssassin preferences to be used by CGPSA. Repeat this
-step for the default home directories of any secondary domains for which
+step for the default home directories of any domains for which
 you want to use custom SpamAssassin preferences.<br/><br/></li>
 
 <li>In the CommuniGate Pro web administration interface, go to the
@@ -391,13 +396,29 @@ file).</p>
 
 <dl>
 
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_4.tgz">1.3.4</a> - 5 August 2004</dt>
+<dd>
+<p>Changes</p>
+<ul>
+
+<li>Added the ability to create a CGPSA domain configuration file for the 
+CommuniGate Pro main domain.</li>
+
+<li>Changed the filename for domain configuration files from "cgpsa.conf" to
+"cgpsa.domainconf". Files named "cgpsa.conf" continue to work in this
+release, but will not work in version 1.4.<br/><br/></li>
+
+</ul>
+</dd>
+
+
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_3.tgz">1.3.3</a> - 19 June 2004</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed an issue where user preferences would not be loaded if there was 
-no corrresponding user ".cgpsa.conf" file.<br/><br/></li>
+<li>Fixed an issue where user SpamAssassin preferences would not be loaded 
+if there were no corresponding user CGPSA preferences.<br/><br/></li>
 
 </ul>
 </dd>
@@ -949,7 +970,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-19 June 2004<br />
+5 August 2004<br />
 </address>
 </body>
 </html>
