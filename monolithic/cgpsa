@@ -85,7 +85,8 @@ our $VERSION = "1.0";
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
 
-our $VERSIONHEADER = "$VERSION (".hostname()."/".$^O."/perl".$].")";
+our $VERSIONHEADERNAME = "X-TFF-CGPSA-Version";
+our $VERSIONHEADERTEXT = "$VERSION (".hostname()."/".$^O."/perl".$].")";
 
 # Set standard error and standard output to autoflush.
 
@@ -336,7 +337,7 @@ sub checkMessageAddHeader
       $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
                      Mail::SpamAssassin::Version().
                      " ($Mail::SpamAssassin::SUB_VERSION)\n";
-      $newheaders .= "X-TFF-Filter-Version: ".$VERSIONHEADER;
+      $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT;
       # remove any double carriage returns...
       $newheaders =~ s/\n\n/\n/g;
       
@@ -369,7 +370,7 @@ sub checkMessage
   # Let's do SpamAssassin!
   
   $mail->replace_header($conf->{loop_prevention_header}, "Attempted");
-  $mail->replace_header("X-TFF-Filter-Version", $VERSIONHEADER);
+  $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
   $mail->replace_header("X-Spam-Status", "SpamAssassin Failed");
   
   if ($conf->{use_user_prefs})
