@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b3
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b4
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b3";
+our $VERSION = "1.3b4";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -699,12 +699,12 @@ sub submitMessage
               # it already has a DMA, so we remove it and put it in
               # an X-Originally-To header
               $receiver_address = 
-                $user_conf->{spam_mailbox_name}."#".$1."@".$2;
+                "\"".$user_conf->{spam_mailbox_name}."#".$1."\""."@".$2;
             }
             else
             {
               $receiver_address = 
-                $user_conf->{spam_mailbox_name}."#".$address;
+                "\"".$user_conf->{spam_mailbox_name}."#".$address."\"";
             }
         
             $orig_address = $address;
@@ -843,7 +843,7 @@ sub getUserInformation
 
 sub checkMessageAddHeader
 {
-  my ($msg_ptr, $unused) = @_;
+  my ($msg_ptr, $score_ptr) = @_;
   my @scanlines;
   my $msg_length = 0;
   
@@ -886,6 +886,7 @@ sub checkMessageAddHeader
       }
       my $msg_score = sprintf("%.1f", $status->get_hits);
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
+      ${$score_ptr} = $status->get_hits;
       
       debug(5, "$was_it_spam ($msg_score/$msg_threshold) in ".
                sprintf("%.1f", getTime() - $start)." seconds");
@@ -937,13 +938,15 @@ sub checkMessageAddHeader
         if ($status->is_spam())
         {
           $newheaders = 
-            "X-Spam-Status: Yes, hits=".int($status->{hits})."\e";
+            "X-Spam-Status: Yes, hits=".
+            sprintf("%.1f", $status->get_hits)."\e";
           $newheaders .= "X-Spam-Flag: YES\e";
         }
         else
         {
           $newheaders = 
-            "X-Spam-Status: No, hits=".int($status->{hits})."\e";
+            "X-Spam-Status: No, hits=".
+            sprintf("%.1f", $status->get_hits)."\e";
         }
         
         $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
@@ -966,6 +969,7 @@ sub checkMessageAddHeader
     debug(5, "SpamAssassin failed in ".sprintf("%.1f", getTime() - $start).
              " seconds: $@");
     $newheaders = $root_conf->{loop_prevention_header}.": Scan Failed\e";
+    ${$score_ptr} = 0.0;
   }
   
   # remove any double carriage returns...
@@ -982,8 +986,8 @@ sub checkMessageAddHeader
 
 sub checkMessage
 {
-  my ($msg_ptr, $account_name, $home_dir, $local_address, $is_spam_ptr) =
-    @_;
+  my ($msg_ptr, $account_name, $home_dir, $local_address, 
+      $is_spam_ptr, $score_ptr) = @_;
   my @scanlines;
   my $msg_length = 0;
   my $domain_name = "";
@@ -1116,6 +1120,8 @@ sub checkMessage
       }
       my $msg_score = sprintf("%.1f", $status->get_hits);
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
+      ${$score_ptr} = $status->get_hits;
+      
       debug(5, $was_it_spam." (".$msg_score."/".$msg_threshold.") for ".
                $local_address." in ".sprintf("%.1f", getTime() - $start).
                " seconds");
@@ -1131,6 +1137,7 @@ sub checkMessage
     $mail->replace_header
       ($root_conf->{loop_prevention_header}, "Scan Failed");
     ${$is_spam_ptr} = 0;
+    ${$score_ptr} = 0.0;
     
     debug(5, "SpamAssassin failed for $local_address in ".
              sprintf("%.1f", getTime() - $start)." seconds: $@");
@@ -1519,6 +1526,7 @@ sub process_file
   
   # Now determine our course of action
   # First count the number of recipients using default SpamAssassin prefs
+  
   my $default_recipient_count = 0;
   foreach my $domain_name (keys %default_recipients)
   {
@@ -1527,18 +1535,39 @@ sub process_file
       $default_recipient_count + scalar(keys %domain_recipients);
   }
     
+  # Now scan the message (or not), and get its score, according to the
+  # appropriate preferences and settings
+  
+  my $msg_score = 0.0;
+  
   if ($root_conf->{headers_only} || $all_destination)
   {
     # we're in "headers-only" mode, so we always run SA
+    
     debug(7, "Running SpamAssassin in ADDHEADER mode");
-    my $newheaders = checkMessageAddHeader(\@msglines, "");
-    printResult("ADDHEADER", $newheaders);
+    my $newheaders = checkMessageAddHeader(\@msglines, \$msg_score);
+    
+    # if the message score exceeds the threshold and we're throwing out
+    # messages, we discard the message... otherwise we add headers
+    
+    if ($root_conf->{auto_discard} && 
+        $msg_score > $root_conf->{discard_threshold})
+    {
+      debug(7, "Discarding spam above threshold score (".
+               $msg_score."/".$root_conf->{discard_threshold});
+      printResult("DISCARD");
+    }
+    else
+    {
+      printResult("ADDHEADER", $newheaders);
+    }
   }
   elsif (($default_recipient_count == 0) &&
          (scalar %custom_recipient_accts == 0))
   {
     # if there are no addresses for which SpamAssassin must be run,
     # we let the message through unaltered.
+    
     debug(7, "No SpamAssassin run required");
     printResult("OK");
   }
@@ -1566,6 +1595,7 @@ sub process_file
     {
       # we've got a domain, let's get its settings and 
       # the list of recipients in it
+      
       my $domain_conf = $domain_conf_cache{$domain_name};
       my %domain_recipients = %{$default_recipients{$domain_name}};
      
@@ -1593,27 +1623,44 @@ sub process_file
         $rewritten_msg = 
           checkMessage(\@msglines, "<default>",
                        $domain_conf->{default_home_dir}, "<default>", 
-                       \$is_spam);
+                       \$is_spam, \$msg_score);
         
-        my @no_dma_list;
-        foreach my $recipient (keys %domain_recipients)
+        if ($domain_conf->{auto_discard} &&
+            ($msg_score > $domain_conf->{discard_threshold}))
         {
-          if (($domain_recipients{$recipient} eq "") || !$is_spam)
-          {
-            push(@no_dma_list, $recipient);
-          }
-          else 
-          { 
-            # it's spam, and we have the info to attempt DMA
-            submitMessage(\$cli, [($rewritten_msg)], $return_path, 
-                          $domain_recipients{$recipient}, $recipient);
-          }
+          # it's spam, and it's above the domain's discard threshold
+          
+          debug(7, "Discarding above-threshold spam for all domain ".
+                   $domain_name." addresses (".$msg_score."/".
+                   $domain_conf->{discard_threshold}.")");
         }
-        
-        if (scalar(@no_dma_list) > 0)
+        else
         {
-          submitMessage(\$cli, [($rewritten_msg)], $return_path, "",
-                        @no_dma_list);
+          # it may or may not be spam, but we have to deliver it
+          
+          my @no_dma_list;
+          foreach my $recipient (keys %domain_recipients)
+          {
+            if (($domain_recipients{$recipient} eq "") || !$is_spam)
+            {
+              push(@no_dma_list, $recipient);
+            }
+            else            
+            { 
+              # it's spam, and we have the info to attempt DMA
+              
+              submitMessage(\$cli, [($rewritten_msg)], $return_path, 
+                            $domain_recipients{$recipient}, $recipient);
+            }
+          }
+              
+          if (scalar(@no_dma_list) > 0)
+          {
+            # submit spam for all non-DMA users
+            
+            submitMessage(\$cli, [($rewritten_msg)], $return_path, "",
+                          @no_dma_list);
+          }
         }
       }
     }
@@ -1622,16 +1669,38 @@ sub process_file
     {
       my $account_name = $custom_recipient_accts{$local_address};
       my $account_dir = $custom_recipient_dirs{$local_address};
+      my $user_conf = $user_conf_cache{$account_name};
       my $is_spam = 0;
       debug(7, "Running SpamAssassin with settings from ".
                $account_dir."/.spamassassin/user_prefs ".
                "for local address ".$local_address);
       $rewritten_msg = checkMessage(\@msglines, $account_name, 
                                     $account_dir, $local_address, 
-                                    \$is_spam);
-      
-      submitMessage(\$cli, [($rewritten_msg)], $return_path,
-                    $account_name, $local_address);        
+                                    \$is_spam, \$msg_score);
+      if ($is_spam && $user_conf->{auto_discard} &&
+          $msg_score > $user_conf->{discard_threshold})
+      {
+        # it's spam and it's above the user's threshold, so we
+        # don't submit it at all
+        
+        debug(7, "Discarding above-threshold spam for local address ".
+                 $local_address." (".$msg_score."/".
+                 $user_conf->{discard_threshold}.")");
+      }
+      elsif ($is_spam)
+      {
+        # it's spam, so we should attempt DMA
+        
+        submitMessage(\$cli, [($rewritten_msg)], $return_path,
+                      $account_name, $local_address);        
+      }
+      else
+      {
+        # it's not spam
+        
+        submitMessage(\$cli, [($rewritten_msg)], $return_path, "",
+                      $local_address);
+      }
     }
     
     # finally, tell the server
@@ -1700,6 +1769,8 @@ sub loadRootConfig
   $root_conf->{use_domain_state} = 1;
   $root_conf->{use_dma_spam_mailbox} = 0;
   $root_conf->{spam_mailbox_name} = "SPAM";
+  $root_conf->{auto_discard} = 0;
+  $root_conf->{discard_threshold} = 25.0; 
   $root_conf->{allow_auto_whitelist} = 1;
   $root_conf->{use_auto_whitelist} = 1;
   $root_conf->{do_network_tests} = 1;
@@ -1995,9 +2066,17 @@ sub readConfigFile
     {
       $conf->{use_dma_spam_mailbox} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^spam[-_]mailbox[-_]name[\s\=]+(\S+)$/)
+    elsif ($line =~ /^spam[-_]mailbox[-_]name[\s\=]+(.+)$/)
     {
       $conf->{spam_mailbox_name} = $1;
+    }
+    elsif ($line =~ /^auto[-_]discard[\s\=]+(\S+)$/)
+    {
+      $conf->{auto_discard} = $1;
+    }
+    elsif ($line =~ /^discard[-_]threshold[\s\=]+(\S+)$/)
+    {
+      $conf->{discard_threshold} = $1;
     }
     elsif ($line =~ /^do[-_]network[-_]tests[\s\=]+(\S+)$/) 
     {
@@ -2015,7 +2094,7 @@ sub readConfigFile
     {
       $conf->{redirect_stderr} = evaluateBoolean($1);
     }
-     elsif ($line =~ /^sa[-_]prefix[\s\=]+(.+)$/)
+    elsif ($line =~ /^sa[-_]prefix[\s\=]+(.+)$/)
     {
       $conf->{sa_prefix} = $1;
     }
