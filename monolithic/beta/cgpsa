@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b5c1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b5c3
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b5c1";
+our $VERSION = "1.3b5c3";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1015,11 +1015,10 @@ sub checkMessageAddHeader
 
 sub checkMessage
 {
-  my ($msg_ptr, $account_name, $home_dir, $local_address, 
+  my ($msg_ptr, $local_address, $domain_name, $account_name, $account_dir, 
       $is_spam_ptr, $score_ptr) = @_;
   my @scanlines;
   my $msg_length = 0;
-  my $domain_name = "";
   my $domain_conf;
   my $user_conf;
   my $sa_prefs_text = "";
@@ -1027,11 +1026,6 @@ sub checkMessage
   our $user_conf_cache;
   our $root_conf;
     
-  if ($account_name =~ /\S*@(\S*)/)
-  {
-    $domain_name = $1;
-  }
-  
   $domain_conf = $domain_conf_cache{$domain_name};
   $user_conf = $user_conf_cache{$account_name};
   
@@ -1064,6 +1058,8 @@ sub checkMessage
   {
     $spamassassin->read_scoreonly_config
       ($root_conf->{default_home_dir}."/.spamassassin/user_prefs");
+    debug(9, "Reading system default SpamAssassin preferences from ".
+             $root_conf->{default_home_dir}."/.spamassassin/user_prefs");
   }
     
   # Next, read the domain preferences if they're supposed to be used
@@ -1072,6 +1068,9 @@ sub checkMessage
   {
     $spamassassin->read_scoreonly_config
       ($domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
+    debug(9, "Reading domain ".$domain_name.
+             " SpamAssassin preferences from ".
+             $domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
   }
   
   # Finally, read the user preferences if they're supposed to be used
@@ -1079,7 +1078,9 @@ sub checkMessage
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
     $spamassassin->read_scoreonly_config
-      ($home_dir."/.spamassassin/user_prefs");
+      ($account_dir."/.spamassassin/user_prefs");
+    debug(9, "Reading user SpamAssassin preferences from ".
+             $account_dir."/.spamassassin/user_prefs");
   }
   
   # Now we've got preferences, let's deal with state files. If auto
@@ -1106,7 +1107,7 @@ sub checkMessage
   
   if ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
-    $state_dir = $home_dir;
+    $state_dir = $account_dir;
     debug(9, "State directory is user home directory ".$state_dir);
   }
   elsif ($domain_conf->{use_domain_state})
@@ -1655,12 +1656,12 @@ sub process_file
           debug(7, "Running SpamAssassin with domain ".$domain_name.
                    " default settings for ".scalar(keys %domain_recipients).
                    " address".$plural);
-        }
-          
+        }  
+        
         my $is_spam = 0;
         $rewritten_msg = 
-          checkMessage(\@msglines, "<default>",
-                       $domain_conf->{default_home_dir}, "<default>", 
+          checkMessage(\@msglines, "<default>", $domain_name, "<default>", 
+                       $domain_conf->{default_home_dir}, 
                        \$is_spam, \$msg_score);
         
         if ($domain_conf->{auto_discard} &&
@@ -1713,9 +1714,16 @@ sub process_file
       debug(7, "Running SpamAssassin with settings from ".
                $account_dir."/.spamassassin/user_prefs ".
                "for local address ".$local_address);
-      $rewritten_msg = checkMessage(\@msglines, $account_name, 
-                                    $account_dir, $local_address, 
-                                    \$is_spam, \$msg_score);
+      my $domain_name = "";
+      if ($account_name =~ /^\S*@(\S*)$/)      
+      {
+        $domain_name = $1;
+      }
+       
+      $rewritten_msg = checkMessage(\@msglines, $local_address, 
+                                    $domain_name, $account_name, 
+                                    $account_dir, \$is_spam, \$msg_score);
+                                    
       if ($is_spam && $user_conf->{auto_discard} &&
           $msg_score >= $user_conf->{discard_threshold})
       {
