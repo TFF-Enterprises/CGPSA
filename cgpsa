@@ -1,0 +1,636 @@
+#!/usr/bin/perl
+
+# CommuniGate Pro Route Canonicalization Filter
+# Copyright (C) 2002 TFF Enterprises
+# Written by Daniel M. Zimmerman
+# Version 1.0a1
+#
+# This CommuniGate Pro filter takes messages from CommuniGate Pro
+# and re-submits them using individual canonical addresses. Thus, 
+# a message which is addressed to 4 local recipients and 2 remote
+# recipients would be re-submitted 5 times, once for each local 
+# recipient (which would be transformed into canonical form as
+# given by the CGP CLI's Route command) and once for the 2 remote
+# recipients.
+#
+# This filter discards all messages that fit the following criteria:
+#
+# - the message is addressed to multiple local recipients (with or
+#   without being addressed to any remote recipients)
+# - the message is addressed to both local and remote recipients
+#
+# However, in doing so, it resubmits the messages to all recipients
+# so that no messages are lost. 
+#
+# Rules that invoke this filter should have the condition that some
+# route uses the LOCAL module, because if no destination addresses
+# are local the filter will simply cause a delay in message processing
+# without changing anything.
+#
+# The motivation for this filter is to allow SpamAssassin processing
+# of messages using individual user preferences.
+
+use strict;
+use POSIX ":sys_wait_h";
+use CGP::CLI;
+use Mail::SpamAssassin;
+use Mail::SpamAssassin::NoMailAudit;
+
+$|=1;
+
+# Location of the CommuniGate Pro base directory. This is used,
+# among other things, for finding the configuration file and the
+# Submitted directory.
+
+our $cgp_base = "/var/CommuniGate";
+
+# Name of the configuration file. This is relative to the
+# CommuniGate Pro base directory.
+
+my $config_filename = "/Settings/cgp-spamassassin.conf";
+
+#
+# Don't modify anything below this line unless you're absolutely
+# sure you know what you're doing.
+#
+
+my %cnf;
+our $conf;
+$conf = \%cnf;
+
+read_config_file($conf, $cgp_base."/".$config_filename);
+
+# Create a SpamAssassin, using the configuration parameters we've
+# read and the system defaults.
+
+our $spamassassin = Mail::SpamAssassin->new
+	({
+    	dont_copy_prefs => 1,
+    	local_tests_only => !($conf->{do_network_tests}),
+    	stop_at_threshold => $conf->{stop_at_threshold},
+    	home_dir_for_helpers => $conf->{helper_state_dir},
+    	user_state_dir => $conf->{system_prefs_dir},
+    	debug => 0,
+    	paranoid => 0
+	 });
+    
+# We should set $ENV{HOME} in /tmp, to prevent creating files
+# anywhere else in the system aside from our CGPro user dirs.
+
+$ENV{'HOME'} = (-d '/tmp' ? '/tmp' : $ENV{TMP} || $ENV{TEMP})."/spamassassin-$$"; 
+mkdir("$ENV{'HOME'}",0700)
+    or die "fatal: Can't create $ENV{'HOME'}";
+mkdir("$ENV{'HOME'}/.spamassassin", 0700)
+    or die "fatal: Can't create $ENV{'HOME'}/.spamassassin";
+
+# If we're going to use auto-whitelists, set that up.
+
+if ($conf->{use_auto_whitelist}) 
+{
+	require Mail::SpamAssassin::DBBasedAddrList;
+
+    # create a factory for the persistent address list
+    my $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
+    $spamassassin->set_persistent_address_list_factory($addrlistfactory);
+};
+
+# Compile the SpamAssassin (without user rules) so we don't have to do
+# it over and over again later.
+
+$spamassassin->compile_now(0);
+$/ = "\n";			# argh, Razor resets this!  Bad Razor! (from spamd.raw)
+
+# Clean up the temp directories we used.
+
+unlink <$ENV{HOME}/.spamassassin/*>,<$ENV{HOME}/*>;
+rmdir "$ENV{HOME}/.spamassassin";
+rmdir $ENV{HOME};
+system "/bin/rm -Rf /tmp/spamassassin-$$";
+delete $ENV{'HOME'};
+
+# And, we're finally read for the Main Loop!
+
+print("* TFF Enterprises SpamAssassin Module v1.0a1 Ready\n");
+
+my $request = <STDIN>;
+
+while ($request) 
+{
+  	if ($request =~ /([0-9]+)\s*([A-Za-z]+)\s*(.*)/si) 
+  	{
+   		my $seqnum = $1;
+        my $command = $2;
+        my $parameter = $3;
+    	    
+        if ($command =~ /INTF/i) 
+        {
+            # CGPro wants to know our interface version (it's 2).
+            print("$seqnum 2\n");
+        }
+        elsif ($command =~ /FILE/i) 
+        { 
+   	    	# If we have no config file, we can't do anything useful...
+       	
+        	if ($conf->{no_configuration}) 
+        	{
+        		print("$seqnum FAILURE no configuration data found.\n");
+        	}
+        	else 
+        	{
+	            # CGPro is giving us a file to examine
+    	        my $id = fork();
+    	        if ($id == 0) 
+    	        {
+    	            &process_file($seqnum, $parameter);
+    	        }
+    	        waitpid(-1, &WNOHANG);
+    	        waitpid(-1, &WNOHANG);
+    	    } 
+    	}
+        else 
+        {
+            # CGPro gave us an unknown command
+            print("* Unknown Command $2\n");
+        }
+    }
+    	
+    $request = <STDIN>;
+}
+
+# And now we're done. There's no cleanup to do, so let's just exit.
+
+print("* TFF Enterprises SpamAssassin Module v1.0a1 Done\n");
+
+exit;
+
+#
+# Subroutines
+#
+
+# Output a debugging string, if appropriate
+sub debug 
+{
+    my $debug_level = scalar(shift);
+    my $debug_string = shift;
+    
+    if ($conf->{debug} && $debug_level <= $conf->{debug_level}) 
+    {
+        print("* ");
+        while ($debug_string =~ /(.)/g) 
+        {
+          if ($1 eq "\r") 
+          {
+            print("\\r");
+          }
+          elsif ($1 eq "\n") 
+          {
+            print("\\n");
+          }
+          elsif ($1 eq "\t") 
+          {
+            print("\\t");
+          }
+          elsif ($1 eq "\\") 
+          {
+            print("\\\\");
+          }
+          elsif ($1 eq "\"") 
+          {
+            print("\\\"");
+          }
+          elsif ($1 eq "\'") 
+          {
+            print("\\\'");
+          }
+          else 
+          {
+            print $1;
+          }
+        }
+        print("\n");
+    }
+}
+
+# Generate a unique filename
+sub unique_filename 
+{
+    my $basetime=time;
+    my $rand=rand(10000);
+    my $uniquename=$basetime.$rand;
+    return our $cgp_base."/Submitted/".$uniquename;
+}
+
+# Submit a message (parameters are a pointer to the message body,
+# a return-path, and a list of envelope-to addresses)
+sub submit_message 
+{
+    my ($msg_ptr, $return_path, @addresses) = @_;
+    my $filename = unique_filename;
+    
+    open(OUTFILE, ">$filename");
+    print OUTFILE "Return-Path: <".$return_path.">\n";
+    foreach my $local_addr (@addresses) 
+    {
+        print OUTFILE "Envelope-To: <".$local_addr.">\n";
+    }
+    print OUTFILE @$msg_ptr;
+    close(OUTFILE);
+    rename($filename, $filename.".sub");
+}
+        
+    
+# Submit a checked message (parameters are a pointer to the message body,
+# a return-path, an envelope-to address, and a local directory path
+# (to use as the SpamAssassin "home" directory, for prefs and state).
+#
+# If user preferences are disabled, the local directory path is not used.
+# If user preferences are enabled, and the local directory path is
+# undefined or there is no ".spamassassin" directory there, then either 
+# the message is submitted as-is or, if system-wide preferences have been 
+# defined, they are used to check the message.
+
+sub submit_checked_message 
+{
+	my ($msg_ptr, $return_path, $address, $home_dir) = @_;
+	my $filename = unique_filename;
+	
+	my $mail = Mail::SpamAssassin::NoMailAudit->new(data => [@$msg_ptr]);
+	$mail->put_header($conf->{loop_prevention_header}, "Attempted");
+
+
+	# Check to see if SpamAssassin prefs exist in the home dir -
+	# if not, we'll either use system-wide prefs (if applicable) or
+	# just pass the message on to submit_message. If no home dir is
+	# specified, we treat it as no prefs existing in the home dir.
+	
+	my $effective_home_dir;
+	
+	if ($conf->{use_user_prefs} && $home_dir && 
+	    (-e "$home_dir/.spamassassin/user_prefs")) 
+	{
+		debug(8, "SpamAssassin prefs found for user $address.");
+		$effective_home_dir = $home_dir;
+	}
+	elsif (-e "$conf->{default_home_dir}/.spamassassin/user_prefs") 
+	{
+		debug(8, "Using systemwide SpamAssassin prefs for user $address.");
+		$effective_home_dir = $conf->{default_home_dir};
+	}
+	else 
+	{
+		debug(8, "No SpamAssassin prefs available for user $address, ".
+				 "submitting message unscanned.");
+	    $mail->replace_header
+	     	($conf->{loop_prevention_header}, "Not Attempted");
+		my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
+		submit_message([($rewritten_msg)], $return_path, $address);
+		return;
+	}
+		
+	# It's SpamAssassin Time...
+
+	my $start = time;
+
+	$spamassassin->read_scoreonly_config
+		($effective_home_dir."/.spamassassin/user_prefs");
+		
+	if ($conf->{use_user_state} && $Mail::SpamAssassin::VERSION >= 2.5)
+	{
+		# SpamAssassin prior to 2.50 can't change user state directories
+		# on the fly, unfortunately...
+		
+		$spamassassin->signal_user_changed 
+			({
+				username => $address,
+				user_dir => $effective_home_dir 
+			 });
+	}
+		
+	my $status = $spamassassin->check($mail);
+	$status->rewrite_mail;
+	my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
+	submit_message([($rewritten_msg)], $return_path, $address);
+	
+	my $was_it_spam;
+	if ($status->is_spam) 
+	{ 
+		$was_it_spam = 'Identified spam'; 
+	} 
+	else 
+	{ 
+		$was_it_spam = 'Identified non-spam'; 
+	}
+    my $msg_score = sprintf("%.1f",$status->get_hits);
+    my $msg_threshold = sprintf("%.1f",$status->get_required_hits);
+	debug(5, "$was_it_spam ($msg_score/$msg_threshold) for $address in ".
+	        sprintf("%.1f", time - $start)." seconds.");
+
+	$status->finish();
+}
+
+# Process A CommuniGate Pro Queue File
+# This subroutine _must_ be called after a fork(), because it
+# exits at the end.
+sub process_file 
+{
+    my ($seqnum, $filename) = @_;
+    my $cgp_header = 1;
+    my ($return_path, @local_addresses, @remote_addresses,
+        @msglines, $cgp_header);
+        
+    # Log in to the CommuniGate Pro CLI
+    my $cli = new CGP::CLI
+    	({ PeerAddr => $conf->{cgp_hostname},
+           PeerPort => $conf->{cgp_port},
+           login    => $conf->{cgp_username},
+           password => $conf->{cgp_password}
+       	 });
+       	 
+    if (!$cli) 
+    {
+        print($seqnum." FAILURE Could not connect to CLI.\n");
+        return;
+    }
+            
+    chomp($filename);
+    if (!$conf->{testing}) 
+    {
+        $filename = our $cgp_base.$filename;
+    };
+    
+    $cgp_header = 1;
+    
+    # Open the File
+    
+    open (MSGFILE, "$filename");
+    foreach my $line (<MSGFILE>) 
+    {
+        if ($cgp_header) 
+        { 
+            debug(9, "Processing CGP header line: ".$line);
+            # if we're in the headers, read an address
+            if ($line =~ /^R.*<(\S*)>/) 
+            {   
+                # a recipient
+                my $raw_recipient = $1;
+                my $data=$cli->Route($1);
+                debug(9, "Recipient, Result from CLI: ".
+                    $data->[0].",".$data->[1].",".$data->[2]);
+                if ($cli->isSuccess) 
+                {
+                    if ($data->[0] eq "LOCAL") 
+                    {
+                        # local (or system) delivery, add to local list
+                        push(@local_addresses, $data->[1]);
+                    } 
+                    elsif ($data->[0] eq "SMTP") 
+                    {
+                        # SMTP delivery, add to remote list
+                        push(@remote_addresses, $data->[2]);
+                    }
+                    elsif ($data->[0] eq "SYSTEM") 
+                    {
+                    	# Special Address; if spamtrap, we stop processing
+                    	# right here and let system handle it
+                    	if ($data->[1] eq "spamtrap") 
+                    	{
+                    		print($seqnum." OK\n");
+                    		$cli->Logout;
+                    		exit;
+                    	}
+                    	else 
+                    	{
+                    		push(@local_addresses, $data->[1]);
+                    	}
+                    }
+                    else 
+                    {
+                        # Unknown result, add to remote list unmodified.
+                        push(@remote_addresses, $raw_recipient);
+                    }
+                }
+                else 
+                {
+                    # Failed routing, probably a bad address, add to
+                    # local list to be submitted separately.
+                    push(@local_addresses, $raw_recipient);
+                }
+            }
+            elsif ($line =~ /^P.*<(\S*@\S*)>/) 
+            {
+                # the return-path
+                $return_path = $1;
+                debug(9, "Return-Path: ".$return_path);
+            }
+            elsif ($line =~ /^\s+$/) 
+            {
+                # a blank line, end of CGP headers
+                $cgp_header = 0;
+            }
+            
+            next;
+        }
+        
+        if ($line =~ /^$conf->{loop_prevention_header}.*/) 
+        {
+          # we've already processed this message, so let's not
+          # waste time processing it again
+          
+          debug(5, "Previously-scanned message allowed through unaltered.");
+          print($seqnum." OK\n");
+          $cli->Logout();
+          exit;
+        }
+        
+        push(@msglines, $line);
+    }
+    close(MSGFILE);
+    
+    # Now determine our course of action
+    
+    if ($#local_addresses == -1)
+    {
+        # if there are no local addresses, we let the message through
+        # unscathed.
+        print($seqnum." OK\n");
+    }
+    else 
+    {
+        # we need to submit a bunch of new messages, so do that and
+        # then DISCARD this message.
+        
+        # first, submit a message for all remote addresses
+        
+        if ($#remote_addresses >= 0) 
+        {
+        	debug(7, "Submitting message for ".@remote_addresses.
+        			 " remote addresses.");
+            submit_message(\@msglines, $return_path, @remote_addresses);
+        }
+        
+        # then, submit a message for each local address
+        
+        foreach my $local_addr (@local_addresses) 
+        {
+        	my $account_dir = undef;
+        	
+        	# see if account directory exists, and if so, what it is
+        	if ($account_dir = $cli->GetAccountLocation($local_addr)) 
+        	{
+               	if ($local_addr =~ /.*@(.*)/) 
+               	{
+        			$account_dir = $cgp_base."/Domains/".$1.
+								   "/".$account_dir;
+				}
+				else 
+				{
+					$account_dir = $cgp_base."/Accounts/".$account_dir;
+				}
+			}
+			
+			debug(8, "Account directory for ".$local_addr." is ".
+					 $account_dir);
+			debug(7, "Checking message for local address: ".$local_addr);
+            submit_checked_message
+            	(\@msglines, $return_path, $local_addr, $account_dir);
+        }
+        
+        # finally, tell the server
+        print($seqnum." DISCARD\n");
+    }
+    
+    # Log out of the CommuniGate Pro CLI.
+    $cli->Logout;
+    
+    # And since this was fork()'d, we should...
+    exit;
+}
+
+# Find the directory path corresponding with a user's CommuniGate
+# account. The SpamAssassin data files will be stored in a
+# .spamassassin folder inside that account's directory.
+
+# Read preferences from the preferences file
+sub read_config_file 
+{
+    my ($conf, $filename) = @_;
+    
+    if (!$filename || !open(IN,"<$filename")) 
+    {
+        # the file doesn't exist
+        $conf->{no_configuration} = 1;
+        return;
+    }
+
+	# default values
+	
+	$conf->{cgp_username} = "username";
+	$conf->{cgp_password} = "password";
+	$conf->{cgp_hostname} = "localhost";
+	$conf->{cgp_port} = 106;
+	$conf->{loop_prevention_header} = "X-TFF-Spam-Check";
+	$conf->{debug} = 0;
+	$conf->{debug_level} = 0;
+	$conf->{use_user_prefs} = 1;
+	$conf->{use_user_state} = 1;
+	$conf->{use_auto_whitelist} = 1;
+	$conf->{do_network_tests} = 1;
+	$conf->{stop_at_threshold} = 0;
+	$conf->{default_home_dir} = "/var/CommuniGate/Settings/SpamAssassin";
+	$conf->{testing} = 0;
+	
+    my @text = (<IN>);
+    close(IN);
+
+    foreach my $line (@text) 
+    {
+        $line =~ s/\r//g;
+        $line =~ s/(^|(?<!\\))\#.*$/$1/;
+        $line =~ s/^\s+//; s/\s+$//; 
+        next if ($line =~ /^$/);
+
+        if ($line =~ /^cgp[-_]username[\s\=]+(\S+)$/) 
+        {
+            $conf->{cgp_username} = $1;
+        }
+		elsif ($line =~ /^cgp[-_]password[\s\=]+(\S+)$/) 
+		{
+			$conf->{cgp_password} = $1;
+		}
+		elsif ($line =~ /^cgp[-_]hostname[\s\=]+(\S+)$/) 
+		{
+			$conf->{cgp_hostname} = $1;
+		}
+		elsif ($line =~ /^cgp[-_]port[\s\=]+(\S+)$/) 
+		{
+			$conf->{cgp_port} = $1;
+		}
+		elsif ($line =~ /^loop[-_]prevention[-_]header[\s\=]+(\S+)$/) 
+		{
+			$conf->{loop_prevention_header} = $1;
+		}
+		elsif ($line =~ /^debug[\s\=]+(\S+)$/) 
+		{
+			$conf->{debug} = evaluate_boolean($1);
+		}
+		elsif ($line =~ /^debug[-_]level[\s\=]+([0-9])\s+$/) 
+		{
+			$conf->{debug_level} = scalar($1);
+		}
+		elsif ($line =~ /^use[-_]user[-_]prefs[\s\=]+(\S+)$/) 
+		{
+			$conf->{use_user_prefs} = evaluate_boolean($1);
+		}
+		elsif ($line =~ /^use[-_]user[-_]state[\s\=]+(\S+)$/) 
+		{
+			$conf->{use_user_state} = evaluate_boolean($1);
+		}
+		elsif ($line =~ /^use[-_]auto[-_]whitelist[\s\=]+(\S+)$/) 
+		{
+			$conf->{use_auto_whitelist} = evaluate_boolean($1);
+		}
+		elsif ($line =~ /^do[-_]network[-_]tests[\s\=]+(\S+)$/) 
+		{
+			$conf->{do_network_tests} = evaluate_boolean($1);
+		}	
+		elsif ($line =~ /^stop[-_]at[-_]threshold[\s\=]+(\S+)$/) 
+		{
+			$conf->{stop_at_threshold} = evaluate_boolean($1);
+		}
+		elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(\S+)$/) 
+		{
+			$conf->{default_home_dir} = $1;
+		}
+		elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(\S+)$/) 
+		{
+			$conf->{helper_state_dir} = $1;
+		}
+		elsif ($line =~ /^testing[\s\=]+(\S+)$/) 
+		{
+			$conf->{testing} = evaluate_boolean($1);
+		}
+	}
+	
+	# Set the home dir for helpers (this is important, so it defaults
+	# to the system prefs dir).
+	
+	$conf->{helper_state_dir} = $conf->{default_home_dir};
+}
+
+# return 1 if the passed parameter is one of the various acceptable
+# ways of writing "true" (yes, on, 1, etc.), and 0 otherwise.
+
+sub evaluate_boolean 
+{
+	my $boolean = shift;
+	
+	if (($boolean =~ /true/i) || ($boolean =~ /yes/i) ||
+		($boolean =~ /on/i) || ($boolean eq "1")) 
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
