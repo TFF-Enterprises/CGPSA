@@ -156,7 +156,7 @@ while ($request)
         
             if ($conf->{no_configuration}) 
             {
-                result("FAILURE no configuration data found.");
+                result("FAILURE no configuration data found");
             }
             else 
             {
@@ -315,19 +315,19 @@ sub submit_checked_message
     if ($conf->{use_user_prefs} && $home_dir && 
         (-e "$home_dir/.spamassassin/user_prefs")) 
     {
-        debug(8, "SpamAssassin prefs found for user $address.");
+        debug(8, "SpamAssassin prefs found for $address");
         $effective_home_dir = $home_dir;
     }
     elsif (!$conf->{require_user_prefs} &&
            (-e "$conf->{default_home_dir}/.spamassassin/user_prefs"))
     {
-        debug(8, "Using systemwide SpamAssassin prefs for user $address.");
+        debug(8, "Using systemwide SpamAssassin prefs for $address");
         $effective_home_dir = $conf->{default_home_dir};
     }
     else 
     {
-        debug(8, "No SpamAssassin prefs available for user $address, ".
-                 "submitting message unscanned.");
+        debug(8, "No SpamAssassin prefs available for $address, ".
+                 "submitting message unscanned");
         $mail->replace_header
             ($conf->{loop_prevention_header}, "Not Attempted");
         my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
@@ -371,7 +371,7 @@ sub submit_checked_message
     my $msg_score = sprintf("%.1f",$status->get_hits);
     my $msg_threshold = sprintf("%.1f",$status->get_required_hits);
     debug(5, "$was_it_spam ($msg_score/$msg_threshold) for $address in ".
-            sprintf("%.1f", time - $start)." seconds.");
+            sprintf("%.1f", time - $start)." seconds");
 
     $status->finish();
 }
@@ -398,7 +398,7 @@ sub process_file
          
     if (!$cli) 
     {
-        result("FAILURE Could not connect to CLI.");
+        result("FAILURE Could not connect to CLI");
         exit();
     }
             
@@ -410,7 +410,7 @@ sub process_file
     
     if (!(-e $filename))
     {
-        debug(1, "Queue file $filename doesn't exist.");
+        debug(1, "Queue file $filename doesn't exist");
         result("OK");
         exit();
     }
@@ -426,11 +426,11 @@ sub process_file
         { 
             debug(9, "Processing CGP header line: $line");
             # if we're in the headers, read an address
-            if ($line =~ /^R.*<(\S*)>/) 
+            if (($line =~ /^R/) && ($line =~ /<(\S*@\S*)>/))
             {   
                 # a recipient
                 my $raw_recipient = $1;
-                my $data=$cli->Route($1);
+                my $data=$cli->Route("\"$1\"");
                 debug(9, "Recipient, Result from CLI: ".
                          $data->[0].",".$data->[1].",".$data->[2]);
                 if ($cli->isSuccess) 
@@ -438,7 +438,34 @@ sub process_file
                     if ($data->[0] eq "LOCAL") 
                     {
                         # local (or system) delivery, add to local list
-                        push(@local_addresses, $data->[1]);
+                        # first, though, check to ensure that we don't lose
+                        # any account detail (+mailboxname) info.
+                        
+                        if ($raw_recipient =~ /(\+\S*)/)
+                        {
+                            # there was account detail, now stored in $1
+                            my $account_detail = $1;
+                            my $hostname = "";
+                            my $username = $data->[1];
+
+                            $account_detail =~ s/@\S*//g;
+                            debug(9, "Account detail: $account_detail");                            
+                            if ($username =~ /(@\S*)/)                            
+                            {
+                                $hostname = $1;
+                            }
+                            $username =~ s/@\S*//g;
+
+                            push(@local_addresses, 
+                                 $username.$account_detail.$hostname);
+                            debug(9, "Canonical address: ".
+                                     $username.$account_detail.$hostname);   
+                        }
+                        else
+                        {
+                            push(@local_addresses, $data->[1]);
+                            debug(9, "Canonical address: $data->[1]");
+                        }
                     } 
                     elsif ($data->[0] eq "SMTP") 
                     {
@@ -509,7 +536,7 @@ sub process_file
         if ($#remote_addresses >= 0) 
         {
             debug(7, "Submitting message for ".@remote_addresses.
-                     " remote addresses.");
+                     " remote addresses");
             submit_message(\@msglines, $return_path, @remote_addresses);
         }
         
@@ -519,10 +546,17 @@ sub process_file
         {
             my $account_dir = undef;
             
+            # remove any account detail, because GetAccountLocation
+            # doesn't understand it.
+            my $local_addr_stripped = $local_addr;
+            $local_addr_stripped =~ s/\+\S*@/@/g;
+            $local_addr_stripped =~ s/\+\S*//g;
+            
             # see if account directory exists, and if so, what it is
-            if ($account_dir = $cli->GetAccountLocation($local_addr)) 
+            if ($account_dir = 
+                    $cli->GetAccountLocation($local_addr_stripped)) 
             {
-                if ($local_addr =~ /.*@(.*)/) 
+                if ($local_addr_stripped =~ /.*@(.*)/) 
                 {
                     $account_dir = $cgp_base."Domains/".$1.
                                    "/".$account_dir;
@@ -533,8 +567,8 @@ sub process_file
                 }
             }
             
-            debug(8, "Account directory for $local_addr is $account_dir.");
-            debug(7, "Checking message for local address: $local_addr.");
+            debug(8, "Account directory for $local_addr is $account_dir");
+            debug(7, "Checking message for local address: $local_addr");
             submit_checked_message
                 (\@msglines, $return_path, $local_addr, $account_dir);
         }
