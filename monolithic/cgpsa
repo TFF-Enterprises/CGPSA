@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a3
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1.1a2";
+our $VERSION = "1.1.1a3";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -669,7 +669,11 @@ sub checkMessageAddHeader
             $spamassassin->{conf}->{always_add_headers})
         {
           # Always add headers to spam, but only if requested for non-spam.
-          $newheaders = "X-Spam-Flag: YES\e";
+          $newheaders = "";
+          if ($status->is_spam())
+          {
+            $newheaders .= "X-Spam-Flag: YES\e";
+          }
           $newheaders .= "X-Spam-Status: ".$status->_build_status_line."\e";
           if ($spamassassin->{conf}->{spam_level_stars} == 1)
           {
