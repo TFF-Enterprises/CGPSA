@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b3c1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b2";
+our $VERSION = "1.3b3c1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -544,59 +544,59 @@ sub initializeCLI
         # OK, it's not anywhere...
         error_exit("Current CGPSA configuration requires CGP::CLI module.");
       }
-      
-      debug(1, "Checking for CommuniGate Pro CLI Access");
-      
-      my $attempts = 0;
-      my $cli = undef;
-      
-      while (!$cli)
-      {
-        $cli = new CGP::CLI
-          ({ PeerAddr => $root_conf->{cgp_hostname},
-             PeerPort => $root_conf->{cgp_port},
-             login    => $root_conf->{cgp_username},
-             password => $root_conf->{cgp_password}
-           });
-       
-         if (!$cli)
-         {
-           debug(1, "Could not connect to CLI (Error: ".
-                    $CGP::ERR_STRING.")");
-           $attempts = $attempts + 1;
-           if ($attempts < 3)
-           {
-             debug(1, "Sleeping for 20 seconds before next attempt");
-             sleep 20;
-           }
-           else
-           {
-             debug(1, "Too many failed attempts");
-             error_exit("Could not connect to CLI. Exiting.");
-           }
-         }
-      }
-      
-      # Check to see if the installed CommuniGate supports the "mail"
-      # extension the routing CLI command.
-      
-      my $data=$cli->Route("postmaster MAIL");
-      if ($cli->isSuccess)
-      {
-        # Support for the extension
-        $root_conf->{route_mail_extension} = 1;
-        debug(9, "CLI supports ROUTE ... MAIL extension");
-      }
-      else
-      {
-        # No support for the extension
-        $root_conf->{route_mail_extension} = 0;
-        debug(9, "CLI does not support ROUTE ... MAIL extension");
-      }
-      
-      $cli->Logout();
-      undef $cli;
     }
+     
+    debug(1, "Checking for CommuniGate Pro CLI Access");
+    
+    my $attempts = 0;
+    my $cli = undef;
+    
+    while (!$cli)
+    {
+      $cli = new CGP::CLI
+        ({ PeerAddr => $root_conf->{cgp_hostname},
+           PeerPort => $root_conf->{cgp_port},
+           login    => $root_conf->{cgp_username},
+           password => $root_conf->{cgp_password}
+         });
+     
+       if (!$cli)
+       {
+         debug(1, "Could not connect to CLI (Error: ".
+                  $CGP::ERR_STRING.")");
+         $attempts = $attempts + 1;
+         if ($attempts < 3)
+         {
+           debug(1, "Sleeping for 20 seconds before next attempt");
+           sleep 20;
+         }
+         else
+         {
+           debug(1, "Too many failed attempts");
+           error_exit("Could not connect to CLI. Exiting.");
+         }
+       }
+    }
+    
+    # Check to see if the installed CommuniGate supports the "mail"
+    # extension the routing CLI command.
+    
+    my $data=$cli->Route("postmaster MAIL");
+    if ($cli->isSuccess)
+    {
+      # Support for the extension
+      $root_conf->{route_mail_extension} = 1;
+      debug(9, "CLI supports ROUTE ... MAIL extension");
+    }
+    else
+    {
+      # No support for the extension
+      $root_conf->{route_mail_extension} = 0;
+      debug(9, "CLI does not support ROUTE ... MAIL extension");
+    }
+    
+    $cli->Logout();
+    undef $cli;
   }
 }
 
@@ -1331,13 +1331,15 @@ sub process_file
                     else
                     {
                       debug(9, "DMA rewriting is enabled for ".$host.
-                               "but is not available on server");
+                               "but account detailing is not available ".
+                               "on server");
                     }
                   }
                   else
                   {
                     debug(9, "DMA rewriting is enabled for ".$host.
-                             "but cannot be detected on server");
+                             "but account detailing setting cannot be ".
+                             "setting on server");
                   }
                 }
                 
@@ -1365,11 +1367,13 @@ sub process_file
                                "settings for ".$host); 
                       if ($user_conf->{use_dma_spam_mailbox})
                       {
-                        $default_recipients{""}{$local_address} = $host;
+                        $default_recipients{$domain_name}{$local_address} = 
+                          $host;
                       }
                       else
                       {
-                        $default_recipients{""}{$local_address} = "";
+                        $default_recipients{$domain_name}{$local_address} = 
+                          "";
                       }
                     }
                     elsif ($account_dir eq $domain_conf->{default_home_dir})
