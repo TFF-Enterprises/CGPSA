@@ -436,7 +436,7 @@ sub process_file
           # we've already processed this message, so let's not
           # waste time processing it again
           
-          debug(5, "Previously-scanned message allowed through unaltered.");
+          debug(5, "Previously-scanned message detected.");
           print($seqnum." OK\n");
           $cli->Logout();
           exit;
