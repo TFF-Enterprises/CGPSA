@@ -1296,7 +1296,7 @@ sub readConfigFile
     {
       $conf->{parallel_requests} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^max[-_]requests[\s\=]+([0-9])\s+$/) 
+    elsif ($line =~ /^max[-_]requests[\s\=]+([0-9]+)\s+$/) 
     {
       $conf->{max_requests} = scalar($1);
       if ($conf->{max_requests} < 0)
