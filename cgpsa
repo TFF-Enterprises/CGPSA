@@ -154,13 +154,14 @@ while ($request)
             
         if ($command =~ /INTF/i) 
         {
-            # CGPro wants to know our interface version (it's 2).
-            printResult("2");
+            # CGPro wants to know our interface version (it's 2). We don't
+            # really care what CGPro's interface version is, since all we
+            # do is DISCARD or OK messages.
+            printResult("INTF 1");
         }
         elsif ($command =~ /FILE/i) 
         { 
             # If we have no config file, we can't do anything useful...
-        
             if ($conf->{no_configuration}) 
             {
                 printResult("FAILURE no configuration data found");
@@ -279,7 +280,8 @@ sub checkMessage
 
     # Let's do SpamAssassin!
     
-    $mail->put_header($conf->{loop_prevention_header}, "Attempted");
+    $mail->replace_header($conf->{loop_prevention_header}, "Attempted");
+    $mail->replace_header("X-Spam-Status", "SpamAssassin Failed");
     $spamassassin->read_scoreonly_config
         ($home_dir."/.spamassassin/user_prefs");
         
@@ -295,25 +297,40 @@ sub checkMessage
              });
     }
         
-    my $status = $spamassassin->check($mail);
-    $status->rewrite_mail;
-    my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
+    eval 
+    {
+        if (my $status = $spamassassin->check($mail))
+        {
+            $status->rewrite_mail;
     
-    my $was_it_spam;
-    if ($status->is_spam) 
-    { 
-        $was_it_spam = 'Identified spam'; 
-    } 
-    else 
-    { 
-        $was_it_spam = 'Identified non-spam'; 
-    }
-    my $msg_score = sprintf("%.1f",$status->get_hits);
-    my $msg_threshold = sprintf("%.1f",$status->get_required_hits);
-    debug(5, "$was_it_spam ($msg_score/$msg_threshold) for $account_name ".
-             "in ".sprintf("%.1f", time - $start)." seconds");
+            my $was_it_spam;
+            if ($status->is_spam) 
+            { 
+                $was_it_spam = 'Identified spam'; 
+            } 
+            else 
+            { 
+            $was_it_spam = 'Identified non-spam'; 
+            }
+            my $msg_score = sprintf("%.1f", $status->get_hits);
+            my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
+            debug(5, "$was_it_spam ($msg_score/$msg_threshold) for ".
+                     "$account_name in ".sprintf("%.1f", time - $start).
+                     " seconds");
 
-    $status->finish();
+            $status->finish();
+        }
+    };
+    
+    if ($@) 
+    {
+        # Something bad happened with SpamAssassin
+        warn $@;
+        debug(5, "SpamAssassin failed for $account_name in ".
+                 sprintf("%.1f", time - $start)." seconds");
+    }
+    
+    my $rewritten_msg = join '',$mail->header,"\n",@{$mail->body};
     return $rewritten_msg;
 }
 
