@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f5c1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f5
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4f5c1";
+our $VERSION = "1.4f5";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1088,6 +1088,7 @@ sub checkMessage
   # Let's do SpamAssassin!
 
   my $sa_settings_text = '';
+  my $sa3_user_dir = $root_conf->{default_home_dir};
   
   # First, read the default preferences (this has the effect of "resetting"
   # the preferences, only necessary in non-parallel-requests mode on SA2.6)
@@ -1109,6 +1110,8 @@ sub checkMessage
   if (($domain_conf != $root_conf) &&
       $domain_conf->{use_domain_prefs} && ($domain_name ne ""))
   {
+    $sa3_user_dir = $domain_conf->{default_home_dir};
+    
     if (open(IN, $domain_conf->{default_home_dir}.$sa_prefs_suffix))
     {
       debug(8, "Reading domain ".$domain_name.
@@ -1124,6 +1127,8 @@ sub checkMessage
   if (($account_dir ne $domain_conf->{default_home_dir}) &&
       $domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
+    $sa3_user_dir = $account_dir;
+    
     if (open(IN, $account_dir.$sa_prefs_suffix))
     {
       debug(8, "Reading user SpamAssassin preferences from ".
@@ -1171,32 +1176,44 @@ sub checkMessage
   # SpamAssassin to the default home directory for this domain; otherwise,
   # we point SpamAssassin to the default home directory for the root prefs.
   
-  my $state_dir = $root_conf->{default_home_dir};
+  my $userstate_dir = $root_conf->{default_home_dir};
   
   if ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
-    $state_dir = $account_dir;
-    debug(8, "State directory is user home directory ".$state_dir);
+    $userstate_dir = $account_dir;
+    debug(8, "State directory is user home directory ".$userstate_dir);
   }
   elsif ($domain_conf->{use_domain_state} && 
          $domain_conf->{default_home_dir} ne $root_conf->{default_home_dir})
   {
-    $state_dir = $domain_conf->{default_home_dir};
+    $userstate_dir = $domain_conf->{default_home_dir};
     debug(8, "State directory is domain default home directory ".
-             $state_dir);
+             $userstate_dir);
   }
   else
   {
     debug(8, "State directory is system default home directory ".
-             $state_dir);
+             $userstate_dir);
   }
     
-  $spamassassin->signal_user_changed 
-    ({
-      username => $account_name,
-      user_dir => $state_dir
-     });
-    
+  if ($root_conf->{spamassassin_api_version} == 3)
+  {
+    $spamassassin->signal_user_changed 
+      ({
+        username => $account_name,
+        user_dir => $sa3_user_dir,
+        userstate_dir => $userstate_dir
+       });
+  }
+  else
+  {
+    $spamassassin->signal_user_changed 
+      ({
+        username => $account_name,
+        user_dir => $userstate_dir,
+       });
+  }
+  
   # if the message is longer than 128K characters, scan only the first
   # 128K characters
   
@@ -2079,6 +2096,8 @@ sub loadDomainConfig
   our %domain_dir_cache;
   our $root_conf;
   
+  debug(9, "loadDomainConfig for ".$domain_name);
+  
   if (!(exists $domain_conf_cache{$domain_name}))
   {
     if ($root_conf->{allow_domain_cgpsa_conf})
@@ -2134,6 +2153,11 @@ sub loadDomainConfig
       $domain_conf_cache{$domain_name} = $root_conf;
     }
   }
+  else
+  {
+    debug(9, "domain configuration already loaded, discard_threshold = ".
+             $domain_conf_cache{$domain_name}->{discard_threshold});
+  }
 }
 
 # Load the user configuration for the specified user into the 
@@ -2163,6 +2187,7 @@ sub loadUserConfig
     $domain_name = "";
   }
   
+  debug(9, "loadUserConfig for ".$user_name);
   loadDomainConfig($domain_name);
   $domain_conf = $domain_conf_cache{$domain_name};
   
@@ -2203,6 +2228,11 @@ sub loadUserConfig
       
       $user_conf_cache{$user_name} = $domain_conf;
     }
+  }
+  else
+  {
+    debug(9, "user configuration already loaded, discard_threshold = ".
+             $user_conf_cache{$user_name}->{discard_threshold});
   }
 }
 
