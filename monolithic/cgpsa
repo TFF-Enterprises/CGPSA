@@ -74,8 +74,8 @@ use strict;
 use Sys::Hostname;
 use POSIX ":sys_wait_h";
 use Fcntl qw(:DEFAULT :flock); # import LOCK_* constants
-#use Mail::SpamAssassin;
-#use Mail::SpamAssassin::NoMailAudit;
+use Mail::SpamAssassin;
+use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
