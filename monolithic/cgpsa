@@ -746,7 +746,7 @@ sub checkMessageAddHeader
                          "\e";
         }
         
-        if (exists $headerlist->{Checker-Version})
+        if (exists $headerlist->{"Checker-Version"})
         {
           $added_sa_version_header = 1;
         }          
