@@ -2,14 +2,14 @@
 
 # $Id$
 
-# CommuniGate Pro SpamAssassin Filter - Version 1.0
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
 #
-# This CommuniGate Pro filter takes messages from CommuniGate Pro and
-# checks them with SpamAssassin. It has two primary operating modes, 
-# "full-featured" and "add headers only".
+# This CommuniGate Pro filter uses SpamAssassin technology to scan messages
+# being transferred by the mail server. It has two primary operating modes, 
+# "full-featured" and "headers-only".
 #
 # In "full-featured" mode, the filter checks the recipients of each message 
 # (using the CGP router, through the CGP CLI) to determine which are local 
@@ -23,7 +23,7 @@
 # auto-whitelists, Bayesian filtering, etc) in this mode. This mode works by 
 # resubmitting messages using the CommuniGate PIPE Module.
 #
-# In "add headers only" mode, the filter scans all messages with the same 
+# In "headers-only" mode, the filter scans all messages with the same 
 # set of SpamAssassin preferences and adds headers to each message based on 
 # the results of the scan; all recipients, local and remote, see exactly the 
 # same added headers. This mode does not resubmit messages at all, and is 
@@ -36,7 +36,7 @@
 #
 # Information on user-configurable options is available in the sample 
 # configuration file supplied with the filter, which must be installed as
-# "<your CGP base directory>/Settings/cgp-spamassassin.conf" (unless you
+# "<your CGP base directory>/Settings/cgpsa.conf" (unless you
 # change the "$config_directory" or "$config_pathname" variable below). 
 # Note that you _must_ properly set the "$cgp_base" variable below for this
 # filter to work at all.
@@ -61,8 +61,8 @@ my $config_directory = "Settings/";
 
 # Full paths to the configuration and lock files.
 
-my $config_pathname = $cgp_base.$config_directory."cgp-spamassassin.conf";
-my $lock_pathname = $cgp_base.$config_directory."cgp-spamassassin.lock";
+my $config_pathname = $cgp_base.$config_directory."cgpsa.conf";
+my $lock_pathname = $cgp_base.$config_directory."cgpsa.lock";
 
 #
 # End of Customizable Variables
@@ -137,7 +137,7 @@ if ($conf->{use_auto_whitelist})
 # If we're only using the default prefs, load them now to save time 
 # later...
 
-if ($conf->{add_headers_only} || !$conf->{use_user_prefs})
+if ($conf->{headers_only} || !$conf->{use_user_prefs})
 {
   $spamassassin->read_scoreonly_config
     ($conf->{default_home_dir}."/.spamassassin/user_prefs");
@@ -164,7 +164,7 @@ unlink <$lock_pathname>;
  
 # And, we're finally read for the Main Loop!
 
-print("* TFF Enterprises CGP SpamAssassin Filter $VERSION Ready\n");
+print("* TFF Enterprises CGPSA Filter $VERSION Ready\n");
 
 my $request = <STDIN>;
 our $seqnum; # global, so it can be printed in debug lines
@@ -216,7 +216,7 @@ while ($request)
 # And now we're done. There's no cleanup to do, so let's just exit.
 
 lockStandardOutput();
-print("* TFF Enterprises CGP SpamAssassin Filter $VERSION Done\n");
+print("* TFF Enterprises CGPSA Filter $VERSION Done\n");
 unlockStandardOutput();
 
 exit();
@@ -669,9 +669,9 @@ sub process_file
   
   # Now determine our course of action
   
-  if ($conf->{add_headers_only})
+  if ($conf->{headers_only})
   {
-    # we're in "add headers only" mode, so we always run SA
+    # we're in "headers-only" mode, so we always run SA
     debug(7, "Running SpamAssassin in ADDHEADER mode.");
     my $newheaders = checkMessageAddHeader(\@msglines, "");
     printResult("ADDHEADER", $newheaders);
@@ -757,10 +757,10 @@ sub readConfigFile
   $conf->{cgp_username} = "username";
   $conf->{cgp_password} = "password";
   $conf->{cgp_hostname} = "localhost";
-  $conf->{add_headers_only} = 0;
+  $conf->{headers_only} = 0;
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;
-  $conf->{loop_prevention_header} = "X-TFF-SpamAssassin-Filter";
+  $conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
   $conf->{direct_mailbox_passthrough} = 1;
   $conf->{debug} = 1;
   $conf->{debug_level} = 9;
@@ -792,7 +792,7 @@ sub readConfigFile
     }
     elsif ($line =~ /^add[-_]headers[-_]only[\s\=]+(\S+)$/)
     {
-      $conf->{add_headers_only} = evaluateBoolean($1);
+      $conf->{headers_only} = evaluateBoolean($1);
     }
     elsif ($line =~ /^use[-_]cli[\s\=]+(\S+)$/)
     {
@@ -864,10 +864,10 @@ sub readConfigFile
     $conf->{helper_state_dir} = $conf->{default_home_dir};
   }
   
-  # If we're in "add headers only" mode, change other settings
+  # If we're in "headers-only" mode, change other settings
   # appropriately.
   
-  if ($conf->{add_headers_only})
+  if ($conf->{headers_only})
   {
     $conf->{use_cli} = 0;
     $conf->{use_user_prefs} = 0;
@@ -983,4 +983,4 @@ sub to_cgp_string
 }
     
   
-# End of CommuniGate Pro SpamAssassin Filter
+# End of CGPSA
