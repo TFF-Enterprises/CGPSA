@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4a2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4a3
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -87,6 +87,13 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 our $domain_prefix = $cgp_base."Domains/";
 our $domain_config_suffix = "/".$domain_config_directory."cgpsa.conf";
 
+# The path to append to a home directory to get the SpamAssassin preference
+# file, in components.
+
+our $sa_prefs_dir_suffix = "/.spamassassin";
+our $sa_prefs_filename_suffix = "/user_prefs";
+our $sa_prefs_suffix = $sa_prefs_directory.$sa_prefs_filename;
+
 # The name to use for CGPSA user configuration files. This name will be
 # appended to the path to the user's "account.web" directory to find their
 # CGPSA configuration.
@@ -106,17 +113,13 @@ use Fcntl qw(:DEFAULT :flock); # import LOCK_* constants
 use Mail::SpamAssassin;
 use Text::Wrap;
 
-# Storable, for data persistence (to save/load baseline SpamAssassin prefs)
-
-use Storable qw/freeze thaw/;
-
 # Signal handlers
 
 $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4a2";
+our $VERSION = "1.4a3";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -241,6 +244,8 @@ sub initialize
   our $root_config_pathname;
   our $root_conf;
   our $VERSION;
+  our $sa_prefs_dir_suffix;
+  our $sa_prefs_suffix;
   
   print("* Loading Configuration File ".$root_config_pathname."\n");
   loadRootConfig();
@@ -302,16 +307,16 @@ sub initialize
   if (!(-r $root_conf->{default_home_dir} && -w _ && -x _ && -d _))
   {
     mkdir("$ENV{'HOME'}", 0700)
-      or error_exit("Can't create default home directory $ENV{'HOME'}, ".
-                    "exiting.");
+      or error_exit("Can't create default home directory ".$ENV{'HOME'}.
+                    ", exiting.");
   }
   
-  if (!(-r $root_conf->{default_home_dir}."/.spamassassin" && 
+  if (!(-r $root_conf->{default_home_dir}.$sa_prefs_dir_suffix && 
         -w _ && -x _ && -d _))
   {
-    mkdir("$ENV{'HOME'}/.spamassassin", 0700)
-      or error_exit ("Can't create directory $ENV{'HOME'}/.spamassassin, ".
-                     "exiting.");
+    mkdir("$ENV{'HOME'}$sa_prefs_dir_suffix", 0700)
+      or error_exit ("Can't create directory ".$ENV{'HOME'}.
+                     $sa_prefs_dir_suffix.", exiting.");
   }
   
   # Create a SpamAssassin, using the configuration parameters we've
@@ -340,15 +345,14 @@ sub initialize
       local_tests_only => !($root_conf->{do_network_tests}),
       stop_at_threshold => $root_conf->{stop_at_threshold},
       home_dir_for_helpers => $root_conf->{helper_state_dir},
-      userstate_dir => $root_conf->{default_home_dir}."/.spamassassin",
+      userstate_dir => 
+        $root_conf->{default_home_dir}.$sa_prefs_dir_suffix,
       debug => $root_conf->{sa_debug},
       PREFIX => $root_conf->{sa_prefix},
       DEF_RULES_DIR => $root_conf->{sa_default_rules_dir},
       LOCAL_RULES_DIR => $root_conf->{sa_local_rules_dir}
      });
     
-  our $fresh_spamassassin_conf = freeze $spamassassin->{conf};
-  
   # Set up a persistent address list factory, for auto-whitelisting
   
   require Mail::SpamAssassin::DBBasedAddrList;
@@ -363,10 +367,10 @@ sub initialize
     {
       $spamassassin->set_persistent_address_list_factory($addrlistfactory);
     }
-    if (-e "$root_conf->{default_home_dir}/.spamassassin/user_prefs")
+    if (-e "$root_conf->{default_home_dir}$sa_prefs_suffix")
     {
       $spamassassin->read_scoreonly_config
-        ($root_conf->{default_home_dir}."/.spamassassin/user_prefs");
+        ($root_conf->{default_home_dir}.$sa_prefs_suffix);
     }
   }
   
@@ -405,10 +409,9 @@ sub initialize
   }
   
   print("* Default SpamAssassin Settings Location: \n");
-  if (-e "$root_conf->{default_home_dir}/.spamassassin/user_prefs")
+  if (-e "$root_conf->{default_home_dir}$sa_prefs_suffix")
   {
-    print("*     $root_conf->{default_home_dir}".
-          "/.spamassassin/user_prefs\n");
+    print("*     ".$root_conf->{default_home_dir}.$sa_prefs_suffix."\n");
   }
   else
   {
@@ -824,13 +827,13 @@ sub getUserInformation
   
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
-    if (-e "$account_dir/.spamassassin")
+    if (-e "$account_dir$sa_prefs_dir_suffix")
     {
       # let's grab a lock, to be sure we're the only ones renaming -
       # we'll check again to see if the directory still exists first...
       
       lockStandardOutput();
-      if (-e "$account_dir/.spamassassin")
+      if (-e "$account_dir$sa_prefs_dir_suffix")
       {
         # the user has preferences in the old location, so let's move
         # them to the new one.
@@ -841,8 +844,8 @@ sub getUserInformation
         {
           mkdir("$account_dir/account.web");
         }
-        rename("$account_dir/.spamassassin",
-               "$account_dir/account.web/.spamassassin");
+        rename("$account_dir$sa_prefs_dir_suffix",
+               "$account_dir/account.web$sa_prefs_dir_suffix");
       }
       unlockStandardOutput();
     }
@@ -852,7 +855,7 @@ sub getUserInformation
   # exist, are in the right place; so we decide whether to use them or not.
   
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&  
-      (-e "$account_dir/account.web/.spamassassin/user_prefs"))
+      (-e "$account_dir/account.web$sa_prefs_suffix"))
   {
     # the user has preferences, so let's use them
     
@@ -1085,6 +1088,7 @@ sub checkMessage
   our $domain_conf_cache;
   our $user_conf_cache;
   our $root_conf;
+  our $sa_prefs_suffix;
     
   $domain_conf = $domain_conf_cache{$domain_name};
   if ($account_name ne "<default>")
@@ -1100,27 +1104,36 @@ sub checkMessage
 
   # Let's do SpamAssassin!
 
-  # First, read the default preferences (only necessary if parallel requests
-  # are not active, to "reset" the preferences)
+  my $sa_settings_text = '';
   
-  if (!$root_conf->{parallel_requests})
+  # First, read the default preferences (this has the effect of "resetting"
+  # the preferences, only necessary in non-parallel-requests mode on SA2.6)
+  
+  if (!$root_conf->{parallel_requests} && 
+      ($root_conf->{spamassassin_api_version} == 2))
   {
-    $spamassassin->read_scoreonly_config
-      ($root_conf->{default_home_dir}."/.spamassassin/user_prefs");
-    debug(8, "Reading system default SpamAssassin preferences from ".
-             $root_conf->{default_home_dir}."/.spamassassin/user_prefs");
+    if (open(IN, "<".$root_conf->{default_home_dir}.$sa_prefs_suffix))
+    {
+      debug(8, "Reading system default SpamAssassin preferences from ".
+               $root_conf->{default_home_dir}.$sa_prefs_suffix);
+      $sa_settings_text = join($sa_settings_text, <IN>);
+      close(IN);
+    }
   }
-    
+  
   # Next, read the domain preferences if they're supposed to be used
   
   if (($domain_conf != $root_conf) && $domain_conf->{use_domain_prefs} && 
       ($domain_name ne ""))
   {
-    $spamassassin->read_scoreonly_config
-      ($domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
-    debug(8, "Reading domain ".$domain_name.
-             " SpamAssassin preferences from ".
-             $domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
+    if (open(IN, $domain_conf->{default_home_dir}.$sa_prefs_suffix))
+    {
+      debug(8, "Reading domain ".$domain_name.
+               " SpamAssassin preferences from ".
+               $domain_conf->{default_home_dir}.$sa_prefs_suffix);
+      $sa_settings_text = join($sa_settings_text, <IN>);
+      close(IN);
+    }
   }
   
   # Finally, read the user preferences if they're supposed to be used
@@ -1128,10 +1141,31 @@ sub checkMessage
   if (($account_dir ne $domain_conf->{default_home_dir}) &&
       $domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
-    $spamassassin->read_scoreonly_config
-      ($account_dir."/.spamassassin/user_prefs");
-    debug(8, "Reading user SpamAssassin preferences from ".
-             $account_dir."/.spamassassin/user_prefs");
+    if (open(IN, $account_dir.$sa_prefs_suffix))
+    {
+      debug(8, "Reading user SpamAssassin preferences from ".
+               $account_dir.$sa_prefs_suffix);
+      $sa_settings_text = join($sa_settings_text, <IN>);
+      close(IN);
+    }
+  }
+  
+  # And now pass the preferences to SpamAssassin
+  
+  if ($root_conf->{spamassassin_api_version} == 3)
+  {
+    $spamassassin->{conf}->{main} = $spamassassin;
+  }
+  
+  $spamassassin->{conf}->parse_scores_only($sa_settings_text);
+  if ($spamassassin->{conf}->{allow_user_rules})
+  {
+    $spamassassin->{conf}->finish_parsing();
+  }
+  
+  if ($root_conf->{spamassassin_api_version} == 3)
+  {
+    delete $spamassassin->{conf}->{main};
   }
   
   # Now we've got preferences, let's deal with state files. If auto
@@ -1858,7 +1892,7 @@ sub process_file
       my $user_conf = $user_conf_cache{$account_name};
       my $is_spam = 0;
       debug(7, "Running SpamAssassin with settings from ".
-               $account_dir."/.spamassassin/user_prefs ".
+               $account_dir.$sa_prefs_suffix.
                "for local address ".$local_address);
       my $domain_name = "";
       if ($account_name =~ /^\S*@(\S*)$/)      
