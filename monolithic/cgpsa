@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.2a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.2
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -41,9 +41,9 @@
 # Note that you _must_ properly set the "$cgp_base" variable below for this
 # filter to work at all.
 
-# CGPSA requires Perl 5.6.0 or higher to run.
+# CGPSA requires Perl 5.6.1 or higher to run.
 
-require 5.6.0;
+require 5.6.1;
 
 #
 # Customizable Variables
@@ -86,17 +86,19 @@ use Fcntl qw(:DEFAULT :flock); # import LOCK_* constants
 use Mail::SpamAssassin;
 use Mail::SpamAssassin::NoMailAudit;
 use Text::Wrap;
+eval { use Time::HiRes qw(time); }; # use hi-res time if available
+  
 $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.2a1";
+our $VERSION = "1.2.2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
 
 our $VERSIONHEADERNAME = "X-TFF-CGPSA-Version";
-our $VERSIONHEADERTEXT = "$VERSION (".hostname().")";
+our $VERSIONHEADERTEXT = "$VERSION";
 
 # Set standard output to autoflush.
 
@@ -276,7 +278,10 @@ sub loadPreferences
       home_dir_for_helpers => $conf->{helper_state_dir},
       user_state_dir => $conf->{default_home_dir},
       debug => 0,
-      paranoid => 0
+      paranoid => 0,
+      PREFIX => $conf->{sa_prefix},
+      DEF_RULES_DIR => $conf->{sa_default_rules_dir},
+      LOCAL_RULES_DIR => $conf->{sa_local_rules_dir}
      });
     
   # If we're going to use auto-whitelists, set that up.
@@ -1274,6 +1279,9 @@ sub readConfigFile
   $conf->{debug} = 1;
   $conf->{debug_level} = 9;
   $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
+  $conf->{sa_prefix} = "":
+  $conf->{sa_default_rules_dir} = "";
+  $conf->{sa_local_rules_dir} = "";
   $conf->{use_user_prefs} = 0;
   $conf->{require_user_prefs} = 0;
   $conf->{use_user_state} = 0;
@@ -1387,10 +1395,6 @@ sub readConfigFile
     {
       $conf->{stop_at_threshold} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(.+)$/) 
-    {
-      $conf->{helper_state_dir} = $1;
-    }
     elsif ($line =~ /^use[-_]c[-_]locale[\s\=]+(\S+)$/)
     {
       $conf->{use_c_locale} = evaluateBoolean($1);
@@ -1399,7 +1403,23 @@ sub readConfigFile
     {
       $conf->{redirect_stderr} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^absolute[-_]queue[-_]filenames[\s\=]+(\S+)$/) 
+     elsif ($line =~ /^sa[-_]prefix[\s\=]+(.+)$/)
+    {
+      $conf->{sa_prefix} = $1;
+    }
+    elsif ($line =~ /^sa[-_]default[-_]rules[-_]dir[\s\=]+(.+)$/)
+    {
+      $conf->{sa_default_rules_dir} = $1;
+    }
+    elsif ($line =~ /^sa[-_]local[-_]rules[-_]dir[\s\=]+(.+)$/)
+    {
+      $conf->{sa_local_rules_dir} = $1;
+    }
+    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(.+)$/) 
+    {
+      $conf->{helper_state_dir} = $1;
+    }
+   elsif ($line =~ /^absolute[-_]queue[-_]filenames[\s\=]+(\S+)$/) 
     {
       $conf->{absolute_queue_filenames} = evaluateBoolean($1);
     }
