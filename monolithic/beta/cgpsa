@@ -86,7 +86,7 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 
 our $domain_prefix = $cgp_base."Domains/";
 our $domain_config_suffix = "/".$domain_config_directory."cgpsa.domainconf";
-# for compatibility with CGPSA 1.3 domain prefs; will disappear in final 1.4
+# for compatibility with CGPSA 1.3.3 and lower domain prefs; will disappear # in final 1.4
 our $domain_config_compat_suffix = 
     "/".$domain_config_directory."cgpsa.conf";
 
