@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b4
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b5c1
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b4";
+our $VERSION = "1.3b5c1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -784,6 +784,7 @@ sub getUserInformation
   }
   
   # see if account directory exists, and if so, what it is
+  
   if ($domain_name ne "") 
   {
     $account_dir = $cgp_base."Domains/".$domain_name."/".$account_dir;
@@ -795,22 +796,26 @@ sub getUserInformation
 
   # get the user's configuration (this also loads the domain's configuration
   # because it needs it to do the configuration inheritance).
+  
   loadUserConfig($account_name, $account_dir."/account.web/");    
   my $domain_conf = $domain_conf_cache{$domain_name};
   my $user_conf = $user_conf_cache{$account_name};
   
   # check to see if old preferences directory needs to be relocated
+  
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
     if (-e "$account_dir/.spamassassin")
     {
       # let's grab a lock, to be sure we're the only ones renaming -
       # we'll check again to see if the directory still exists first...
+      
       lockStandardOutput();
       if (-e "$account_dir/.spamassassin")
       {
         # the user has preferences in the old location, so let's move
         # them to the new one.
+        
         debug(9, "Moving CGPSA 1.0.x preferences to new location.");
         if (!(-e "$account_dir/account.web"))
         {
@@ -824,12 +829,13 @@ sub getUserInformation
   }
   
   # ok, now we know that user-level SpamAssassin preferences, if they 
-  # exist, are in the right place; so we decide whether we'll use them or
-  # not.
+  # exist, are in the right place; so we decide whether to use them or not.
+  
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&  
       (-e "$account_dir/account.web/.spamassassin/user_prefs"))
   {
     # the user has preferences, so let's use them
+    
     $account_dir = "$account_dir/account.web";
   }
   elsif (!$domain_conf->{require_user_prefs})
@@ -838,17 +844,20 @@ sub getUserInformation
     {
       # the domain's default home directory is the effective home 
       # directory
+      
       $account_dir = $domain_conf->{default_home_dir};
     }
     else
     {
       # the global default home directory is the effective home directory
+      
       $account_dir = $root_conf->{default_home_dir};
     }
   }
   else
   {
     # undef is the effective home directory
+    
     $account_dir = undef;
   }
   
@@ -945,6 +954,7 @@ sub checkMessageAddHeader
       }
       
       # always add CGPSA Version header and loop prevention header
+      
       $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
       $newheaders .= $root_conf->{loop_prevention_header}.": Scanned\e";
       
@@ -991,6 +1001,7 @@ sub checkMessageAddHeader
   }
   
   # remove any double carriage returns...
+  
   $newheaders =~ s/\n/\e/g;   # replace \n's with \e's      
   $newheaders =~ s/\e\e/\e/g; # remove any double \e's
       
@@ -1096,12 +1107,20 @@ sub checkMessage
   if ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
     $state_dir = $home_dir;
+    debug(9, "State directory is user home directory ".$state_dir);
   }
   elsif ($domain_conf->{use_domain_state})
   {
     $state_dir = $domain_conf->{default_home_dir};
+    debug(9, "State directory is domain default home directory ".
+             $state_dir);
   }
-  
+  else
+  {
+    debug(9, "State directory is system default home directory ".
+             $state_dir);
+  }
+    
   $spamassassin->signal_user_changed 
     ({
       username => $account_name,
