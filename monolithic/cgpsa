@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.5
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.6
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -91,7 +91,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.5";
+our $VERSION = "1.2.6";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -127,6 +127,7 @@ my %cnf;
 our $conf = \%cnf;
 our @scan_domains = undef;
 our $spamassassin = undef;
+our $addrlistfactory = undef;
 
 # Load Time::HiRes if available
 
@@ -164,10 +165,13 @@ sub signalHUP
 
 sub processHUP
 {
-  # Give child processes a chance to be cleaned up...
-  
+  our $spamassassin;
+  our $addrlistfactory;
   our %pids;
   my $pid;
+  
+  # Give child processes a chance to be cleaned up...
+
   foreach $pid (keys %pids)
   {
     waitpid($pid, 0); # blocking wait
@@ -187,7 +191,13 @@ sub processHUP
     print("* HUP Signal Received, Re-initializing CGPSA.\n");
   }
 
+  if ($addrlistfactory)
+  {
+    $addrlistfactory->finish();
+  }
+  
   undef $spamassassin;
+  undef $addrlistfactory;
   
   loadPreferences();
   unlockStandardOutput();
@@ -286,7 +296,7 @@ sub loadPreferences
       local_tests_only => !($conf->{do_network_tests}),
       stop_at_threshold => $conf->{stop_at_threshold},
       home_dir_for_helpers => $conf->{helper_state_dir},
-      user_state_dir => $conf->{default_home_dir},
+      userstate_dir => $conf->{default_home_dir},
       debug => $conf->{sa_debug},
       PREFIX => $conf->{sa_prefix},
       DEF_RULES_DIR => $conf->{sa_default_rules_dir},
@@ -300,7 +310,7 @@ sub loadPreferences
     require Mail::SpamAssassin::DBBasedAddrList;
   
     # create a factory for the persistent address list
-    my $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
+    our $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
     $spamassassin->set_persistent_address_list_factory($addrlistfactory);
   };
   
