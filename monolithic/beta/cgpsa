@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4a3
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f1
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -88,9 +88,6 @@ our $domain_prefix = $cgp_base."Domains/";
 our $domain_config_filename = "cgpsa.domainconf";
 our $domain_config_suffix = 
     "/".$domain_config_directory.$domain_config_filename;
-# for compatibility with CGPSA 1.3.3 and lower domain prefs; will disappear # in final 1.4
-our $domain_config_compat_suffix = 
-    "/".$domain_config_directory."cgpsa.conf";
 
 # The path to append to a home directory to get the SpamAssassin preference
 # file, in components.
@@ -124,7 +121,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4a3";
+our $VERSION = "1.4f1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -793,10 +790,6 @@ sub submitMessage
 # ".spamassassin/user_prefs" file in the user's CommuniGate Pro 
 # "account.web" directory.  A return value of undef means that SpamAssassin 
 # should not be run for the specified user.
-#
-# In CGPSA 1.1, the location for user settings was changed. This function 
-# will automatically move user settings detected in the old location to the 
-# new location, as necessary.
 
 sub getUserInformation
 {
@@ -804,22 +797,31 @@ sub getUserInformation
   my $cli = ${$cli_ptr};
   my $account_dir = $cli->GetAccountLocation($account_name);
   my $domain_name = "";
+  my $domain_dir = "Accounts";
   
   if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
   }
   
-  # see if account directory exists, and if so, what it is
+  # see if domain directory exists, and if so, what it is (if the
+  # domain is "", the directory is "Accounts" because it's the root
+  # directory).
   
-  if ($domain_name ne "") 
+  if ($domain_name ne "")
   {
-    $account_dir = $cgp_base."Domains/".$domain_name."/".$account_dir;
+    $domain_dir = $cli->GetDomainLocation($domain_name);
+    if (!$domain_dir)
+    {
+      # the CLI call failed, so we'll do this the old-fashioned way
+      
+      $domain_dir = "Domains/".$domain_name;
+    }
   }
-  else 
-  {
-    $account_dir = $cgp_base."Accounts/".$account_dir;
-  }
+    
+  # construct the full path to the account directory
+  
+  $account_dir = $cgp_base.$domain_dir."/".$account_dir;
 
   # get the user's configuration (this also loads the domain's configuration
   # because it needs it to do the configuration inheritance).
@@ -827,37 +829,9 @@ sub getUserInformation
   loadUserConfig($account_name, $account_dir."/account.web/");    
   my $domain_conf = $domain_conf_cache{$domain_name};
   my $user_conf = $user_conf_cache{$account_name};
+
   
-  # check to see if old preferences directory needs to be relocated
-  
-  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
-  {
-    if (-e "$account_dir$sa_prefs_dir_suffix")
-    {
-      # let's grab a lock, to be sure we're the only ones renaming -
-      # we'll check again to see if the directory still exists first...
-      
-      lockStandardOutput();
-      if (-e "$account_dir$sa_prefs_dir_suffix")
-      {
-        # the user has preferences in the old location, so let's move
-        # them to the new one.
-        
-        debug(5, "Moving CGPSA 1.0.x preferences for ".$account_name.
-                 "to new location.");
-        if (!(-e "$account_dir/account.web"))
-        {
-          mkdir("$account_dir/account.web");
-        }
-        rename("$account_dir$sa_prefs_dir_suffix",
-               "$account_dir/account.web$sa_prefs_dir_suffix");
-      }
-      unlockStandardOutput();
-    }
-  }
-  
-  # ok, now we know that user-level SpamAssassin preferences, if they 
-  # exist, are in the right place; so we decide whether to use them or not.
+  # decide whether to use the user's preferences or not
   
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&  
       (-e "$account_dir/account.web$sa_prefs_suffix"))
@@ -1388,7 +1362,7 @@ sub process_file
   our %domain_conf_cache;
   our %user_conf_cache;
   my $filename = shift;
-  my $return_path;
+  my $return_path = "";
   my @msglines;
   my $cgp_header;
   my $all_destination;
@@ -1493,7 +1467,7 @@ sub process_file
           
           if ($cli->isSuccess) 
           {
-            if ($module eq "LOCAL") 
+            if ($module eq "LOCAL")
             {
               # local (or system) delivery, add to appropriate
               # local list. we preserve the envelope address as much
@@ -1707,7 +1681,7 @@ sub process_file
           $default_recipients{""}{$raw_recipient} = "";
         }
       }
-      elsif ($line =~ /^P.*<(\S*@\S*)>/ && !$all_destination) 
+      elsif ($line =~ /^P.*<(\S*)>/ && !$all_destination) 
       {
         # the return-path
         $return_path = $1;
@@ -1778,7 +1752,7 @@ sub process_file
     {
       debug(7, "Discarding spam above threshold score (".
                sprintf("%.1f", $msg_score)."/".
-               $root_conf->{discard_threshold});
+               $root_conf->{discard_threshold}.")");
       printResult("DISCARD");
     }
     else
@@ -2087,21 +2061,6 @@ sub loadDomainConfig
            $cgp_base.$root_config_directory.$domain_config_filename);
       }
       
-      # for backward compatibility with 1.3 domain preferences, will
-      # disappear in final 1.4
-      
-      if ($conf{no_configuration} && ($domain_name ne ""))
-      {
-        %conf = ();
-        foreach my $setting (keys %root_conf_hash)
-        {
-          $conf{$setting} = $root_conf_hash{$setting};
-        }
-        readConfigFile
-          (\%conf, 
-           $domain_prefix.$domain_name.$domain_config_compat_suffix);
-      }
-      
       if (!$conf{no_configuration})
       {
         # we successfully loaded something, let's cache it
@@ -2364,7 +2323,7 @@ sub readConfigFile
     }
     elsif ($line =~ /^auto[-_]discard[\s\=]+(\S+)$/)
     {
-      $conf->{auto_discard} = $1;
+      $conf->{auto_discard} = evaluateBoolean($1);
     }
     elsif ($line =~ /^discard[-_]threshold[\s\=]+(\S+)$/)
     {
