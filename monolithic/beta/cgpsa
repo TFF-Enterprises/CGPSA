@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5b1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.5b1";
+our $VERSION = "1.3b1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -143,10 +143,10 @@ print("* TFF Enterprises CGPSA Filter $VERSION Starting\n");
 
 # Declare some "global" variables.
 
-our %root_conf_hash = ();
-our $root_conf = \%root_conf_hash;
-our %domain_conf_hash = ();
-our %user_conf_hash = ();
+our %root_conf_cache = ();
+our $root_conf = \%root_conf_cache;
+our %domain_conf_cache = ();
+our %user_conf_cache = ();
 our @scan_domains = undef;
 our $spamassassin = undef;
 
@@ -212,10 +212,10 @@ sub processHUP
 
   undef our $spamassassin;
   undef our @scan_domains;
-  undef our %root_conf_hash;
+  undef our %root_conf_cache;
   undef our $root_conf;
-  undef our %domain_conf_hash;
-  undef our %user_conf_hash;
+  undef our %domain_conf_cache;
+  undef our %user_conf_cache;
   
   initialize();
   unlockStandardOutput();
@@ -674,8 +674,8 @@ sub submitMessage
     {
       $domain_name = $1;
     }
-    my $domain_conf = $domain_conf_hash{$domain_name};
-    my $user_conf = $user_conf_hash{$account_name};
+    my $domain_conf = $domain_conf_cache{$domain_name};
+    my $user_conf = $user_conf_cache{$account_name};
     my $receiver_address = "";
   
     if ($cli && $user_conf->{use_dma_spam_mailbox})
@@ -775,8 +775,8 @@ sub getUserInformation
   # get the user's configuration (this also loads the domain's configuration
   # because it needs it to do the configuration inheritance).
   loadUserConfig($account_name, $account_dir."/account.web/");    
-  my $domain_conf = $domain_conf_hash{$domain_name};
-  my $user_conf = $user_conf_hash{$account_name};
+  my $domain_conf = $domain_conf_cache{$domain_name};
+  my $user_conf = $user_conf_cache{$account_name};
   
   # check to see if old preferences directory needs to be relocated
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
@@ -986,17 +986,17 @@ sub checkMessage
   my $domain_conf;
   my $user_conf;
   my $sa_prefs_text = "";
-  our $domain_conf_hash;
-  our $user_conf_hash;
+  our $domain_conf_cache;
+  our $user_conf_cache;
   our $root_conf;
     
   if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
-    $domain_conf = $domain_conf_hash{$domain_name};
+    $domain_conf = $domain_conf_cache{$domain_name};
   }
   
-  $user_conf = $user_conf_hash{$account_name};
+  $user_conf = $user_conf_cache{$account_name};
   
   # if the message is longer than 128K characters, scan only the first
   # 128K characters
@@ -1149,8 +1149,11 @@ sub checkMessage
 
 sub process_file 
 {
-  my $filename = shift;
   our $seqnum;
+  our $root_conf;
+  our %domain_conf_cache;
+  our %user_conf_cache;
+  my $filename = shift;
   my $return_path;
   my @msglines;
   my $cgp_header;
@@ -1175,7 +1178,16 @@ sub process_file
     return;
   }
  
-   # Log in to the CommuniGate Pro CLI, if necessary
+  # If we're not in parallel requests mode, flush the domain and
+  # user preference caches
+  
+  if (!$root_conf->{parallel_requests})
+  {
+    %domain_conf_cache = ();
+    %user_conf_cache = ();
+  }
+  
+  # Log in to the CommuniGate Pro CLI, if necessary
   
   my $cli = undef;
   
@@ -1261,7 +1273,7 @@ sub process_file
                 $domain_name = $1;
               }
               loadDomainConfig($domain_name);
-              $domain_conf = $domain_conf_hash{$domain_name};
+              $domain_conf = $domain_conf_cache{$domain_name};
               
               if (!$default_recipients{$domain_name})
               {
@@ -1284,7 +1296,7 @@ sub process_file
                 # Let's get the user's home directory and try to load 
                 # their preferences
                 my $account_dir = getUserInformation(\$cli, $host);
-                my $user_conf = $user_conf_hash{$host};
+                my $user_conf = $user_conf_cache{$host};
                   
                 if ($user_conf->{direct_mailbox_rewrite} &&
                     ($dma_mailbox ne ""))
@@ -1538,7 +1550,7 @@ sub process_file
     {
       # we've got a domain, let's get its settings and 
       # the list of recipients in it
-      my $domain_conf = $domain_conf_hash{$domain_name};
+      my $domain_conf = $domain_conf_cache{$domain_name};
       my %domain_recipients = %{$default_recipients{$domain_name}};
      
       if (scalar(keys %domain_recipients) > 0)
@@ -1707,7 +1719,7 @@ sub loadRootConfig
 
 
 # Load the domain configuration for the specified domain into the
-# domain_conf_hash. This will be identical to the root configuration if the 
+# domain_conf_cache. This will be identical to the root configuration if the 
 # specified domain is "", if it doesn't exist, or if there is no domain
 # configuration for the specified domain. If the domain configuration for 
 # the specified domain has already been loaded, it is not loaded again. All 
@@ -1717,15 +1729,15 @@ sub loadRootConfig
 sub loadDomainConfig
 {
   my $domain_name = shift;
-  my %conf = %root_conf_hash;
-  our %domain_conf_hash;
+  my %conf = %root_conf_cache;
+  our %domain_conf_cache;
   our $root_conf;
   
   if ($domain_name eq "")
   {
-    $domain_conf_hash{""} = $root_conf;
+    $domain_conf_cache{""} = $root_conf;
   }
-  elsif (!(exists $domain_conf_hash{$domain_name}))
+  elsif (!(exists $domain_conf_cache{$domain_name}))
   {
     debug(9, "Attempting to load domain configuration for ".$domain_name);
     
@@ -1736,20 +1748,20 @@ sub loadDomainConfig
     {
       # we successfully loaded something, let's cache it
       debug(9, "Loaded domain configuration for ".$domain_name);
-      $domain_conf_hash{$domain_name} = \%conf;
+      $domain_conf_cache{$domain_name} = \%conf;
     }
     else
     {
       # we didn't load anything, so for this domain we use the root
       # preferences
       debug(9, "Using root configuration for ".$domain_name);
-      $domain_conf_hash{$domain_name} = $root_conf;
+      $domain_conf_cache{$domain_name} = $root_conf;
     }
   }
 }
 
 # Load the user configuration for the specified user into the 
-# user_conf_hash, from the specified user settings directory. This will be 
+# user_conf_cache, from the specified user settings directory. This will be 
 # identical to the domain configuration if there is no user configuration
 # for the specified user. All settings not explicitly specified in the user 
 # configuration file are taken from the domain configuration file. This
@@ -1762,8 +1774,8 @@ sub loadUserConfig
   my %conf = ();
   my $domain_name;
   my $domain_conf;
-  our %domain_conf_hash;
-  our %user_conf_hash;
+  our %domain_conf_cache;
+  our %user_conf_cache;
   our $root_conf;
   
   if ($user_name =~ /^\S@(\S)$/)
@@ -1776,9 +1788,9 @@ sub loadUserConfig
   }
   
   loadDomainConfig($domain_name);
-  $domain_conf = $domain_conf_hash{$domain_name};
+  $domain_conf = $domain_conf_cache{$domain_name};
   
-  if (!(exists $user_conf_hash{$user_name}))
+  if (!(exists $user_conf_cache{$user_name}))
   {
     debug(9, "Attempting to load user configuration for ".$user_name);
 
@@ -1798,14 +1810,14 @@ sub loadUserConfig
     {
       # we successfully loaded something, let's cache it
       debug(9, "Loaded user configuration for ".$user_name);
-      $user_conf_hash{$user_name} = \%conf;
+      $user_conf_cache{$user_name} = \%conf;
     }
     else
     {
       # we didn't load anything, so for this domain we use the root
       # preferences
       debug(9, "Using domain configuration for ".$user_name);
-      $user_conf_hash{$user_name} = $domain_conf;
+      $user_conf_cache{$user_name} = $domain_conf;
     }
   }
 }
@@ -2162,6 +2174,7 @@ sub error_exit
   }
   exit();
 }
+
 
 # Convert an arbitrary string to CommuniGate Pro string format, and
 # return it as a result.

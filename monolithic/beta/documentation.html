@@ -8,12 +8,12 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.5b1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3b1</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
 
-<p><em>This is a beta version of CGPSA. Read the revision history before installing it.</em></p>
+<p><em>This is an early beta version of CGPSA, which introduces many new configuration options. While it should work as a drop-in replacement for 1.2.x with existing configuration files, you should read the upgrading instructions and revision history, as well as the new configuration file, before installing it. In particular, CGPSA 1.3 requires SpamAssassin 2.6 or higher.</em></p>
 
 <p>CGPSA works in concert with <a
 href="http://www.spamassassin.org/">SpamAssassin</a>&trade; software
@@ -40,13 +40,13 @@ from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) 
 version is
 <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_5.tgz">1.2.5</a>,
-released 13 December 2003.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a>,
+released 31 December 2003.</p>
 
 <p>The current beta version of CGPSA is <a
-href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b1.tgz">1.5b1</a
->, released ? December 2003. Information about new features of the 1.5 betas
-can be found in the <a href="#history">revision history</a>.</p>
+href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_3b1.tgz">1.3b1</a
+>, released 31 December 2003. A summary of the new features of the 1.3 
+release can be found in the <a href="#history">revision history</a>.</p>
 
 <h2>Documentation</h2>
 
@@ -77,17 +77,19 @@ href="#overview:headersonly">headers-only</a>".</p>
 
 <p>Full-featured mode uses CommuniGate Pro's PIPE functionality to
 resubmit messages to the server after scanning, and can also use the
-CommuniGate Pro CLI to determine information about message
-recipients. In this mode, email is scanned only for the recipients on
-the local system, and email for remote systems is always left
-unaltered. This is good, because SpamAssassin headers added according
-to your local policy may interfere with the spam filtering policy of a
+CommuniGate Pro CLI to determine information about message recipients
+and load separate CGPSA settings and SpamAssassin settings for
+individual CommuniGate Pro domains and individual users. In this mode,
+email is scanned only for the recipients on the local system for whom
+scanning is turned on, and email for remote systems is always left
+unaltered. This is good, because SpamAssassin headers added according to
+your local policy may interfere with the spam filtering policy of a
 remote system. If a particular message is destined for both local and
 remote users, the local users receive a scanned copy and the remote
-users an unaltered one. Scanned email is treated exactly as
-SpamAssassin would treat it; for instance, if the SpamAssassin
-preferences say to rewrite the subject line of spam, a scanned spam
-will have a rewritten subject line. </p>
+users an unaltered one. Scanned email is treated exactly as SpamAssassin
+would treat it; for instance, if the SpamAssassin preferences say to
+rewrite the subject line of spam, a scanned spam will have a rewritten
+subject line. </p>
 
 <p>Other advanced functionality, such as the use of individual
 SpamAssassin preference files and state files for particular users
@@ -107,7 +109,7 @@ functionality. Instead, it adds headers to messages directly through
 CommuniGate's external filter interface. This has the benefit of being
 more efficient than using PIPE, because it does not require
 resubmission and reprocessing of messages. However, it also eliminates
-much of the advanced functionality, such as the use of individual
+much of the advanced functionality, such as the use of domain and user
 preference and state files, and the ability to distribute unaltered
 messages to remote servers.</p>
 
@@ -119,7 +121,7 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
-<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.5 or higher</li>
+<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.6 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
 below and in SpamAssassin's documentation).</li>
@@ -173,6 +175,11 @@ later.<br/><br/></li>
 any of the settings you want to change - they are all well documented in
 the configuration file itself.<br/><br/></li>
 
+<li>Install customized copies of the <code>cgpsa.conf</code> configuration file into the <code>Settings</code> subdirectories of all secondary domains (<i>e.g.</i>, <code>/var/CommuniGate/Domains/mydomain.com/Settings</code>) for which you want customized CGPSA settings. You can modify any settings
+you choose in this file, but only those that explicitly indicate that they can be overridden at the domain level will be used. Also note that domain 
+settings will only be used if CLI usage is enabled (see the next step for
+details).<br/><br/></li>
+
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must install the <a
 href="http://www.stalker.com/CGPerl/">CommuniGate Pro CLI Perl
@@ -196,12 +203,13 @@ enabled, you must create a CommuniGate Pro account with PWD access (as
 described in the configuration file). Use the username and password
 specified in your <code>cgpsa.conf</code>. This user must have
 administrative access to all the domains for which you will be using
-CGPSA (the easiest way to do this is to give it access to modify all
-settings and privileges). Enable a number of PWD connections
-greater than the number of enqueuer threads used by your server. See the
-configuration file for details. If you are running in headers-only mode,
-or in full-featured mode without the CLI, you need not create an account
-for PWD access.<br/><br/></li>
+CGPSA (the easiest way to do this is to give it access to "modify and
+monitor everything"; at minimum, it should have access to modify "server
+and module settings" and "all domains and accounts settings"). Enable a
+number of PWD connections greater than the number of enqueuer threads
+used by your server. See the configuration file for details. If you are
+running in headers-only mode, or in full-featured mode without the CLI,
+you need not create an account for PWD access.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, and your CommuniGate Pro setup has IP addresses specifically
@@ -214,8 +222,10 @@ listening.<br/><br/></li>
 <li>Create the "default home directory", whose path is set in the
 configuration file (<code>cgpsa.conf</code>). This is where the default
 SpamAssassin preferences and state files will be stored - that is, those
-that are used in the absence of individual user
-preferences.<br/><br/></li>
+that are used in the absence of individual user preferences. If you have
+created customized settings for secondary domains, and they have their
+own default home directory paths, create those directories as
+well.<br/><br/></li>
 
 <li>Create a SpamAssassin configuration in the default home directory,
 if necessary. If the CommuniGate Pro server is the only software on your
@@ -224,8 +234,9 @@ system using SpamAssassin, you can just use SpamAssassin's
 <code>/etc/mail/spamassassin/</code>) to set up SpamAssassin's
 preferences. Otherwise, create a <code>.spamassassin</code> subdirectory
 inside the default home directory, containing a <code>user_prefs</code>
-file with the SpamAssassin preferences to be used by
-CGPSA.<br/><br/></li>
+file with the SpamAssassin preferences to be used by CGPSA. Repeat this
+step for the default home directories of any secondary domains for which
+you want to use custom SpamAssassin preferences.<br/><br/></li>
 
 <li>In the CommuniGate Pro web administration interface, go to the
 "Helper Settings" page (under "Settings/General"). In an empty "Content
@@ -286,7 +297,10 @@ with the new CGPSA to the configuration file you currently have
 installed. If there are any new configuration options that you want to
 use, add them to your installed configuration file. Alternatively, you
 can add your own customizations to the new configuration file and copy
-it over the old one.<br/><br/></li>
+it over the old one. When upgrading from 1.2 to a 1.3 beta, you may also
+want to create domain and user settings files as described in step 6 of
+the installation instructions and in the included
+<code>cgpsa.conf</code> file.<br/><br/></li>
 
 <li>In the CommuniGate Pro web administration interface, go to the
 "Helper Settings" page (under "Settings/General"). In the "Content
@@ -308,37 +322,25 @@ Like</a>).<br/><br/></li>
 
 <hr/>
 
-<h3 id="reversion">Reverting to CGPSA 1.0.x</h3>
+<h3 id="reversion">Reverting to CGPSA 1.2.x</h3>
 
-<p>If you decide to revert your system to a 1.0 version of CGPSA, and you 
-have user-level preferences for any of your users, you must move those 
-preferences back to the location where CGPSA 1.0.x expects them. To do so, 
-follow these instructions:</p>
-<ol>
-<li>Turn off CGPSA, by unchecking "Use Filter" for the CGPSA filter on the 
-"Helper Settings" page of the CommuniGate Pro web administration interface 
-and clicking the "Update" button.<br/><br/></li>
-<li>Replace your beta CGPSA script with <a href="http://www.tffenterprises.com/cgpsa/">the 
-latest release version</a> (1.0.7 or higher). There is no need to change
-<code>cgpsa.conf</code>, since a 1.0.x CGPSA will ignore settings that
-don't exist for that version.<br/><br/></li>
-<li>Turn on CGPSA, by checking "Use Filter" for the CGPSA filter on the 
-"Helper Settings" page of the CommuniGate Pro web administration interface 
-and clicking the update button.<br/><br/></li>
-</ol>
+<p>No special steps should be required to revert to a 1.2.x version of
+CGPSA from a 1.3 beta. All the extra settings and configuration files used
+by the 1.3 beta will simply be ignored by 1.2.x.</p>
 
 <hr/>
 
 <h3 id="disclaimer">Disclaimer</h3>
 
-<p>This is a beta. It may very well have bugs in it. It hasn't been
-tested for as long as a regular release. Any bugs that might exist in it
-are unlikely to cause the loss of email, because CommuniGate Pro is very
-intelligent about how it works with external filters - when a filter
-fails, the message stays enqueued. However, it is <em>possible</em> that
-email could be lost. There is no warranty, express or implied,
-associated with CGPSA; we will not be liable for any lost email. Use at
-your own risk.</p>
+<p>This is an early beta. It may very well have bugs in it. It contains
+a lot of new code (about 500 lines, 1/3 of the total size of CGPSA 1.2,
+have been added), which hasn't been tested for very long. Any bugs that
+might exist in it are unlikely to cause the loss of email, because
+CommuniGate Pro is very intelligent about how it works with external
+filters - when a filter fails, the message stays enqueued. However, it
+is <em>possible</em> that email could be lost. There is no warranty,
+express or implied, associated with CGPSA; we will not be liable for any
+lost email. Use at your own risk.</p>
 
 <hr/>
 
@@ -383,25 +385,35 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b1.tgz">1.5b1</a> - ? December 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_3b1.tgz">1.3b1</a> - 31 December 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
-<li>Added preference hierarchies and preference inheritance. When a
-particular user's mail is scanned, the CGPSA and SpamAssassin
-preferences for that user are determined as follows: the default CGPSA
-and SpamAssassin preferences are used as a base; next, any domain-level
-CGPSA and SpamAssassin preferences for the user's domain are used to
-override the defaults; finally, any user-level CGPSA and SpamAssassin
-preferences are used to override the domain-level preferences. It is
-possible to turn off user-level preference overrides, or CGPSA itself,
-on a per-domain basis.</li>
-<li>Added the ability to specify, at each level of the preference hierarchy, spam and ham mailboxes to be used for automatic Bayesian learning. These are automatically learned every day at a specified time.</li>
+<li>Added domain- and user-level CGPSA preferences, domain-level
+SpamAssassin preferences, and preference inheritance. When a particular
+user's mail is scanned, the CGPSA and SpamAssassin preferences for that
+user are determined as follows: the default CGPSA and SpamAssassin
+preferences are used as a base; next, any domain-level CGPSA and
+SpamAssassin preferences for the user's domain are used to override the
+defaults; finally, any user-level CGPSA and SpamAssassin preferences are
+used to override the domain-level preferences. It is possible to turn
+off user-level preference overrides, or CGPSA itself, on a per-domain
+basis; there are also fine-grained controls over what can be overridden
+in user preferences (for example, you might allow a user to have their
+own SpamAssassin preferences but not to use auto-whitelisting).</li>
 <li>Added the ability to use direct mailbox addressing to place detected
-spam directly into users' spam mailboxes without the need for
-user-level rules; the spam mailbox names can be chosen on a server-wide, domain-wide, or individual user basis.</li>
+spam directly into users' spam mailboxes without the need for user-level
+rules; the spam mailbox names can be chosen on a server-wide,
+domain-wide, or individual user basis. CGPSA checks to be sure that
+direct mailbox addressing is enabled on the server before attempting to
+use it.</li>
+<li>Before rewriting a direct mailbox address as account detail (if
+"direct_mailbox_rewrite" is on), CGPSA now checks to be sure that account
+detailing is enabled on the server.</li>
+<li>CGPSA now requires SpamAssassin 2.6 or higher.</li>
+</ul>
 </dd>
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - ? December 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - 31 December 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -702,8 +714,10 @@ anybody has any suggestions, I'd really appreciate hearing them...</p>
 to support individual auto-whitelists, Bayes databases, and
 SpamAssassin preferences for CommuniGate users. This hypothetical
 version of CGPSA will also be refactored to be somewhat more
-object-oriented and modular (because 1000-line Perl scripts are not
+object-oriented and modular (because 2000-line Perl scripts are not
 the easiest things in the world to maintain).</p>
+
+<p>A future release will add the ability to specify, at each level of the preference hierarchy, spam and ham mailboxes to be used for automatic Bayesian learning. These will be automatically learned once a day.</p>
 
 <hr/>
 
@@ -718,7 +732,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-3 December 2003<br />
+31 December 2003<br />
 </address>
 </body>
 </html>
