@@ -62,8 +62,8 @@ my $config_directory = "Settings/";
 # Full paths to the configuration, lock, and standard error files.
 
 my $config_pathname = $cgp_base.$config_directory."cgpsa.conf";
-my $lock_pathname = $cgp_base.$config_directory."cgpsa.lock";
-my $error_pathname = $cgp_base.$config_directory."cgpsa.err";
+my $lock_pathname = $cgp_base.$config_directory."cgpsa.lock.test";
+my $error_pathname = $cgp_base.$config_directory."cgpsa.err.test";
 
 #
 # End of Customizable Variables
@@ -94,17 +94,22 @@ our $VERSIONHEADERTEXT = "$VERSION (".hostname().")";
 select(STDOUT);
 $|=1;
 
-# Set Text::Wrap to wrap text at 200 characters
+# Set up Text::Wrap
 
-$Text::Wrap::columns = 200;
-
+$Text::Wrap::columns = 100;
+if ($Text::Wrap::VERSION >= 2001.0929)
+{
+  $Text::Wrap::tabstop = 4;
+  $Text::Wrap::unexpand = 0;
+}
+  
 # Print a hello.
 
 print("* TFF Enterprises CGPSA Filter $VERSION Starting\n");
 
 my %cnf;
-our $conf;
-$conf = \%cnf;
+our $conf = \%cnf;
+our @scan_domains = undef;
 
 print("* Loading Configuration File ".$config_pathname."\n");
 readConfigFile($conf, $config_pathname);
@@ -112,7 +117,7 @@ if ($conf->{no_configuration})
 {
   # Exit if there's no configuration, since we can't do anything useful.
   
-  error_exit("Unable to read CGPSA configuration file, exiting");
+  error_exit("Unable to read CGPSA configuration file, exiting.");
 }
 print("* Configuration File Loaded\n");
 
@@ -124,8 +129,9 @@ if ($conf->{redirect_stderr})
   open(STDERR, ">>$error_pathname");
   select(STDERR);
   $|=1;
-  print STDERR "* Standard Error Redirected By ".
-               "TFF Enterprises CGPSA Filter $VERSION\n";
+  print("* ".scalar localtime()." Standard Error Redirected By ".
+        "TFF Enterprises CGPSA Filter $VERSION\n");
+  select(STDOUT);
 }
 
 # Locale change, to "C", for SpamAssassin's well-being, if option is set.
@@ -149,14 +155,16 @@ $ENV{'PATH'} = "";
 if (!(-r $conf->{default_home_dir} && -w _ && -x _ && -d _))
 {
   mkdir("$ENV{'HOME'}", 0700)
-    or error_exit("Can't create default home directory $ENV{'HOME'}");
+    or error_exit("Can't create default home directory $ENV{'HOME'}, ".
+                  "exiting.");
 }
 
 if (!(-r $conf->{default_home_dir}."/.spamassassin" && 
       -w _ && -x _ && -d _))
 {
   mkdir("$ENV{'HOME'}/.spamassassin", 0700)
-    or error_exit ("Can't create directory $ENV{'HOME'}/.spamassassin");
+    or error_exit ("Can't create directory $ENV{'HOME'}/.spamassassin, ".
+                   "exiting.");
 }
 
 # Create a SpamAssassin, using the configuration parameters we've
@@ -285,6 +293,13 @@ while ($request)
         $pids{$pid} = 1;
       } 
     }
+    elsif ($command =~ /QUIT/i)
+    {
+      # CGPro wants us to quit
+      print("* QUIT message received, exiting.\n");
+      last;
+    }
+    
     else 
     {
       # CGPro gave us an unknown command
@@ -443,13 +458,24 @@ sub getEffectiveHomeDirectory
   {
     if (-e "$account_dir/.spamassassin")
     {
-      # the user has preferences in the old location, so let's move
-      # them to the new one.
-      debug(9, "Moving CGPSA 1.0.x preferences to new location.");
-      rename "$account_dir/.spamassassin" 
-             "$account_dir/account.web/.spamassassin";
+      # let's grab a lock, to be sure we're the only ones renaming -
+      # we'll check again to see if the directory still exists first...
+      lockStandardOutput();
+      if (-e "$account_dir/.spamassassin")
+      {
+        # the user has preferences in the old location, so let's move
+        # them to the new one.
+        debug(9, "Moving CGPSA 1.0.x preferences to new location.");
+        if (!(-e "$account_dir/account.web"))
+        {
+          mkdir("$account_dir/account.web");
+        }
+        rename("$account_dir/.spamassassin",
+               "$account_dir/account.web/.spamassassin");
+      }
+      unlockStandardOutput();
     }
-     
+       
     if (-e "$account_dir/account.web/.spamassassin/user_prefs")
     {
       # the user has preferences, so let's use them
@@ -492,6 +518,7 @@ sub checkMessageAddHeader
     }
     else
     {
+      debug(9, "Scanning first 256K of message only");
       last;
     }
   }
@@ -574,7 +601,7 @@ sub checkMessageAddHeader
     # Something bad happened with SpamAssassin
     
     debug(5, "SpamAssassin failed in ".sprintf("%.1f", time - $start).
-             " seconds");
+             " seconds: $@");
   }
   
   return $newheaders;
@@ -603,6 +630,7 @@ sub checkMessage
     }
     else
     {
+      debug(9, "Scanning first 256K of message only");
       last;
     }
   }
@@ -612,8 +640,6 @@ sub checkMessage
 
   # Let's do SpamAssassin!
   
-  $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
-  
   if ($conf->{use_user_prefs})
   {
     if (!$conf->{parallel_requests})
@@ -621,7 +647,7 @@ sub checkMessage
       # workaround for the SpamAssassin "stacking preferences" issue
       # when parallel requests are not active
       $spamassassin->read_scoreonly_config
-        ($default_home_dir."/.spamassassin/user_prefs")
+        (our $default_home_dir."/.spamassassin/user_prefs")
     }
     
     $spamassassin->read_scoreonly_config
@@ -644,7 +670,7 @@ sub checkMessage
   {
     if (my $status = $spamassassin->check($mail))
     {
-      $status->replace_original_message([@$msg_ptr]);
+      $mail->replace_original_message([@$msg_ptr]);
       $status->rewrite_mail;
   
       my $was_it_spam;
@@ -673,13 +699,14 @@ sub checkMessage
     $mail->replace_header($conf->{loop_prevention_header}, "Scan Failed");
 
     debug(5, "SpamAssassin failed for $account_name in ".
-             sprintf("%.1f", time - $start)." seconds");
+             sprintf("%.1f", time - $start)." seconds: $@");
   }
   else
   {
     $mail->replace_header($conf->{loop_prevention_header}, "Scanned");
   }
     
+  $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
   my $rewritten_msg = $mail->as_string();
   $mail->finish();
   return $rewritten_msg;
@@ -811,11 +838,11 @@ sub process_file
                 # source - silly CGP)
                 
                 debug(8, "all@ recipient address detected, using ".
-                         "ADDHEADER mode for all recipients.");
+                         "ADDHEADER mode for all recipients");
                 $all_destination = 1;
               }
-              else if (($raw_recipient =~ /(\S*)#(\S*)/) &&
-                  !$conf->{direct_mailbox_scan})
+              elsif (($raw_recipient =~ /(\S*)#(\S*)/) &&
+                      !$conf->{direct_mailbox_scan})
               {
                 # there's DMA, so this is a "remote" address
                 debug(8, "Using direct mailbox addressing for ".
@@ -825,7 +852,8 @@ sub process_file
               else
               {
                 # we have to attempt a scan
-                $account_dir = getEffectiveHomeDirectory(\$cli, $username);
+                my $account_dir = 
+                  getEffectiveHomeDirectory(\$cli, $username);
                 debug(9, "Local address ".$local_address.", account name ".
                          $username.", effective home directory ".
                          $account_dir);
@@ -853,6 +881,34 @@ sub process_file
                 }
               }
             }
+            elsif (our @scan_domains)
+            {
+              # check to see if the destination is in one of our scan
+              # domains. if so, add it to the default local list.
+
+              my $matched = 0;
+
+              foreach my $domain (@scan_domains)
+              {
+                if ($username eq $domain)
+                {
+                  debug(8, "Using default SpamAssassin settings for ".
+                           "remote address ".$raw_recipient.
+                           " (in scan domain $domain)");
+                  push(@local_addresses_default, $raw_recipient);
+                  $matched = 1;
+                  last;
+                }
+              }
+
+              if (!$matched)
+              {
+                # we didn't match any of the special domains, so let's
+                # treat the recipient as remote
+
+                push(@remote_addresses, $raw_recipient);
+              }
+            } 
             else 
             {
               # add the address to the remote list
@@ -896,7 +952,7 @@ sub process_file
       # waste time processing it again - be sure to clean up
       # by closing thre CLI and the queue file
       
-      debug(5, "Previously-scanned message detected.");
+      debug(5, "Previously-scanned message detected");
       if ($cli)
       {
         $cli->Logout();
@@ -919,7 +975,7 @@ sub process_file
   if ($conf->{headers_only} || $all_destination)
   {
     # we're in "headers-only" mode, so we always run SA
-    debug(7, "Running SpamAssassin in ADDHEADER mode.");
+    debug(7, "Running SpamAssassin in ADDHEADER mode");
     my $newheaders = checkMessageAddHeader(\@msglines, "");
     printResult("ADDHEADER", $newheaders);
   }
@@ -928,7 +984,7 @@ sub process_file
   {
     # if there are no addresses for which SpamAssassin must be run,
     # we let the message through unaltered.
-    debug(7, "No SpamAssassin run required.");
+    debug(7, "No SpamAssassin run required");
     printResult("OK");
   }
   else
@@ -970,12 +1026,11 @@ sub process_file
     {
       my $account_dir = shift(@account_dirs_custom);
       debug(7, "Running SpamAssassin with settings from ".
-               $account_dir."/.spamassassin/user_prefs".
+               $account_dir."/.spamassassin/user_prefs ".
                "for local address ".$local_address);
-      $rewritten_msg = checkMessage(\@msglines, $account_dir,
-                      $local_address);
-      submitMessage([($rewritten_msg)], $return_path, 
-              $local_address);        
+      $rewritten_msg = 
+        checkMessage(\@msglines, $account_dir, $local_address);
+      submitMessage([($rewritten_msg)], $return_path, $local_address);        
     }
     
     # finally, tell the server
@@ -1007,6 +1062,8 @@ sub readConfigFile
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;
   $conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
+  $conf->{scan_domains} = 0;
+  our @scan_domains = undef;
   $conf->{direct_mailbox_scan} = 0;
   $conf->{direct_mailbox_rewrite} = 0;
   $conf->{debug} = 1;
@@ -1064,6 +1121,12 @@ sub readConfigFile
     elsif ($line =~ /^loop[-_]prevention[-_]header[\s\=]+(\S+)$/) 
     {
       $conf->{loop_prevention_header} = $1;
+    }
+    elsif ($line =~ /^scan[-_]domains[\s\=]+(.+)$/)
+    {
+      # got to parse a space-separated list of domain names
+      @scan_domains = split /\s+/, $1;
+      $conf->{scan_domains} = 1;
     }
     elsif ($line =~ /^direct[-_]mailbox[-_]scan[\s\=]+(\S+)$/) 
     {
@@ -1233,16 +1296,13 @@ sub printResult
 
 sub printExtraInfo
 {
-  my $info_string = shift;
-
+  my $info_string = to_cgp_string(shift);
+  
   # Wrap the string, if necessary.
-  my @lines = wrap("", "", $info_string);
-        
+
+  my $output_line = wrap("* $seqnum ", "* $seqnum   ", $info_string);
   lockStandardOutput();
-  foreach my $line (@lines)
-  {
-    print("* $seqnum ".to_cgp_string($line)."\n");
-  }
+  print($output_line."\n");
   unlockStandardOutput();
 }
 
@@ -1277,7 +1337,9 @@ sub error_exit
   my $error_string = shift;
   my $cgp_error_string = to_cgp_string($error_string);
   
-  print STDERR "* CGPSA Error: ".$cgp_error_string."\n";
+  select STDERR;
+  print("* ".scalar localtime()." CGPSA Error: ".$cgp_error_string."\n");
+  select STDOUT;
   
   if ($conf->{redirect_stderr})
   {

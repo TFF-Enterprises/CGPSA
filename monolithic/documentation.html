@@ -301,16 +301,33 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1.1.tgz">1.1</a> - ?</dt>
 <dd>
 <ul>
-<li>Modified the processing of message headers to preserve as much information as possible about the Envelope-To addresses.</li>
-<li>Added the ability to turn off checking for LOCAL addresses, so that CGPSA scans all mail that passes through it regardless of its destination. In general, this is not a good thing to have CGPSA do; however, there are configurations (such as using CGP as a relay to another server) that may require it. (incomplete)</li>
-<li>Added date/time stamp to the standard error output header and footer.</li>
-<li>Changed CGPSA's output functions to wrap lines to 200 characters, to work around the CommuniGate log line length limit.</li>
-<li>Added signal handling: if the main CGPSA process receives a HUP, it reloads all of its own and SpamAssassin's preferences. (incomplete)</li>
-<li>Partially worked around the behavior whereby, when parallel_requests is off and use_user_prefs is on, users' SpamAssassin preferences get "stacked" on top of each other. Now, the SpamAssassin preferences in the default home directory are loaded before each set of user preferences, so they are "stacked" on top of the user prefs; this means that, if the default preferences file contains explicit settings for every parameter changed in a user preference file, SpamAssassin will return to these defaults between users.</li>
+<li>Added handling of the new QUIT message in version 3 of the CGP External Filter Interface. The filter is still compatible with all version 2 CGP servers (that is, it still works with version 4.0 or higher). 
+<li>Modified the processing of message headers to preserve as much 
+information as possible about the Envelope-To addresses.</li>
+<li>Added the ability to specify a list of destination domains that should 
+always have their mail scanned using the "scan_domains" option. This makes 
+it possible to use CGP as a relay/gateway server (to filter and process 
+incoming email).</li>
+<li>Added date/time stamp to the standard error output header and 
+footer.</li>
+<li>Changed CGPSA's output functions to wrap lines to 200 characters, to 
+work around the CommuniGate log line length limit.</li>
+<li>Added signal handling: if the main CGPSA process receives a HUP, it 
+reloads all of its own and SpamAssassin's preferences. (incomplete)</li>
+<li>Partially worked around the behavior whereby, when parallel_requests is 
+off and use_user_prefs is on, users' SpamAssassin preferences get "stacked" 
+on top of each other. Now, the SpamAssassin preferences in the default home 
+directory are loaded before each set of user preferences, so they are 
+"stacked" on top of the user prefs; this means that, if the default 
+preferences file contains explicit settings for every parameter changed in a 
+user preference file, SpamAssassin will return to these defaults between 
+users.</li>
 <li>Worked around SpamAssassin's problem with extremely large messages, by
 only scanning the first 250K of each message.</li>
-<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have been delivered when it shouldn't have been.</li>
-<li>Changed the location of the per-user configurations used by CGPSA (old configurations will automatically be moved to the new location).</li>
+<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have 
+been delivered when it shouldn't have been.</li>
+<li>Changed the location of the per-user configurations used by CGPSA (old 
+configurations will automatically be moved to the new location).</li>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
 <dd>
 <ul>
