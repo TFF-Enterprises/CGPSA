@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -27,10 +27,9 @@ be used with multiple CommuniGate Pro enqueuer threads.</p>
 functionality as the use of <a
 href="http://razor.sourceforge.net/">Razor</a>, <a
 href="http://www.rhyolite.com/anti-spam/dcc/">DCC</a>, Bayesian
-learning (with SpamAssassin 2.5 or higher), and auto-whitelists. All
-these features are controlled through SpamAssassin's regular
-configuration files. For more information on SpamAssassin features and
-configuration, see the SpamAssassin <a
+learning, and auto-whitelists. All these features are controlled through
+SpamAssassin's regular configuration files. For more information on
+SpamAssassin features and configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
@@ -111,9 +110,10 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher</li>
 <li>Perl version 5.6.1 or higher</li>
+<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.5 or higher</li>
+<li>Additional Perl modules as required by the configuration options you 
+choose for CGPSA (described in the installation steps below).</li>
 </ol>
-
-<p>In addition, CGPSA requires the installation of <a href="http://www.spamassassin.org/">SpamAssassin</a>, as described in the installation steps below.</p>
 
 <hr/>
 
@@ -199,7 +199,7 @@ assigned to domains, make sure that either you have specified
 "127.0.0.1" as an address associated with one of your domains or you
 have changed the "cgp_hostname" setting in <code>cgpsa.conf</code> to
 refer to a hostname or IP address on which the CommuniGate server is
-listening.</li>
+listening.<br/><br/></li>
 
 <li>Create the "default home directory", whose path is set in the
 configuration file (<code>cgpsa.conf</code>). This is where the default

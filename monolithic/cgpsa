@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a3
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a4
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1.1a3";
+our $VERSION = "1.1.1a4";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -724,18 +724,15 @@ sub checkMessageAddHeader
                            "\e";
           }
         }
-        $newheaders =~ s/\n/\e/g; # replace \n's with \e's
       }
       
-      # always add CGPSA Version and SpamAssassin Version headers
+      # always add CGPSA Version and SpamAssassin Version headers, and the
+      # loop prevention header
       $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
                      Mail::SpamAssassin::Version().
                      " ($Mail::SpamAssassin::SUB_VERSION)\e";
-      $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT;
-
-      # remove any double carriage returns...
-      $newheaders =~ s/\n\n/\n/g;
-      $newheaders =~ s/\e\e/\e/g;
+      $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
+      $newheaders .= $conf->{loop_prevention_header}.": Scanned\e";
       
       $status->finish();
       $mail->finish();
@@ -748,8 +745,13 @@ sub checkMessageAddHeader
     
     debug(5, "SpamAssassin failed in ".sprintf("%.1f", time - $start).
              " seconds: $@");
+    $newheaders = $conf->{loop_prevention_header}.": Scan Failed\e";
   }
   
+  # remove any double carriage returns...
+  $newheaders =~ s/\n/\e/g;   # replace \n's with \e's      
+  $newheaders =~ s/\e\e/\e/g; # remove any double \e's
+      
   return $newheaders;
 }
 
