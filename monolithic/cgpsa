@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.5
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.6a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,7 +79,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.5";
+our $VERSION = "1.0.6a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -122,57 +122,6 @@ if ($conf->{use_c_locale})
   setlocale(LC_ALL, "C");
   $ENV{'LC_ALL'} = "C";
 }
-
-# If we're using the CLI, we need the CGP CLI module. 
-# If it's not there, we gracefully abort.
-
-if ($conf->{use_cli})
-{
-  eval { require CGP::CLI; };
-   
-  if ($@)
-  {
-    # CGP::CLI didn't load from CGP/CLI...
-
-    eval { require CLI; };
-
-    if ($@)
-    {
-      # OK, it's not anywhere...
-      die "* Error: Current CGPSA configuration requires CGP::CLI ".
-          "module. Exiting.";
-    }
-    
-    my $cli = new CGP::CLI
-      ({ PeerAddr => $conf->{cgp_hostname},
-         PeerPort => $conf->{cgp_port},
-         login    => $conf->{cgp_username},
-         password => $conf->{cgp_password}
-       });
-     
-    if (!$cli) 
-    {
-      die "* Error: Could not connect to CommuniGate Pro CLI. Exiting.";
-    }
-    
-    # Check to see if the installed CommuniGate supports the "mail"
-    # extension the routing CLI command.
-    
-    my $data=$cli->Route("postmaster MAIL");
-    if ($cli->isSuccess)
-    {
-      # Support for the extension
-      $conf->{route_mail_extension} = 1;
-    }
-    else
-    {
-      # No support for the extension
-      $conf->{route_mail_extension} = 0;
-    }
-    $cli->Logout();
-  }
-}
-
 
 # We should set $ENV{'HOME'} in /tmp, to prevent creating files anywhere 
 # else in the system aside from our CGPro user dirs. We also set 
@@ -251,9 +200,20 @@ print("* TFF Enterprises CGPSA Filter $VERSION Ready\n");
 my $request = <STDIN>;
 our $seqnum; # global, so it can be printed in debug lines
 my %pids, my $pid;
+my $cli_checked = 0;
 
 while ($request) 
 {
+  # If we're using the CLI, we need the CGP CLI module. 
+  # If it's not there, we gracefully abort. This check occurs
+  # the first time we receive input from the server.
+  
+  if (!$cli_checked)
+  {
+    check_cli();
+    $cli_checked = 1;
+  }
+  
   # Give child processes a chance to be cleaned up...
 
   foreach $pid (keys %pids)
@@ -324,6 +284,60 @@ exit();
 #
 # Subroutines
 #
+
+# Checks the version of the CommuniGate Pro CLI, to see which form
+# of the Route command to use. If the CLI is not being used, this
+# routine is essentially a no-op. 
+
+sub checkCLI
+{
+  if ($conf->{use_cli})
+  {
+    eval { require CGP::CLI; };
+     
+    if ($@)
+    {
+      # CGP::CLI didn't load from CGP/CLI...
+  
+      eval { require CLI; };
+  
+      if ($@)
+      {
+        # OK, it's not anywhere...
+        die "* Error: Current CGPSA configuration requires CGP::CLI ".
+            "module. Exiting.";
+      }
+      
+      my $cli = new CGP::CLI
+        ({ PeerAddr => $conf->{cgp_hostname},
+           PeerPort => $conf->{cgp_port},
+           login    => $conf->{cgp_username},
+           password => $conf->{cgp_password}
+         });
+       
+      if (!$cli) 
+      {
+        die "* Error: Could not connect to CommuniGate Pro CLI. Exiting.";
+      }
+      
+      # Check to see if the installed CommuniGate supports the "mail"
+      # extension the routing CLI command.
+      
+      my $data=$cli->Route("postmaster MAIL");
+      if ($cli->isSuccess)
+      {
+        # Support for the extension
+        $conf->{route_mail_extension} = 1;
+      }
+      else
+      {
+        # No support for the extension
+        $conf->{route_mail_extension} = 0;
+      }
+      $cli->Logout();
+    }
+  }
+}
 
 # Submit a message (parameters are a pointer to the message body,
 # a return-path, and a list of envelope-to addresses) using the
