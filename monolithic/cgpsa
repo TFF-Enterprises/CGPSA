@@ -87,7 +87,9 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 # domain name, including a leading "/".
 
 our $domain_prefix = $cgp_base."Domains/";
-our $domain_config_suffix = "/".$domain_config_directory."cgpsa.domainconf";
+our $domain_config_filename = "cgpsa.domainconf";
+our $domain_config_suffix = 
+    "/".$domain_config_directory.$domain_config_filename;
 # for compatibility with CGPSA 1.3.3 and lower domain prefs; will disappear
 # in final 1.4
 our $domain_config_compat_suffix = 
@@ -1910,13 +1912,22 @@ sub loadDomainConfig
         $conf{$setting} = $root_conf_hash{$setting};
       }
     
-      readConfigFile
-        (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
-
+      if ($domain_name ne "")
+      {
+        readConfigFile
+          (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
+      }
+      else
+      { 
+        readConfigFile
+          (\%conf, 
+           $cgp_base.$root_config_directory.$domain_config_filename);
+      }
+      
       # for backward compatibility with 1.3 domain preferences, will
       # disappear in final 1.4
       
-      if ($conf{no_configuration})
+      if ($conf{no_configuration} && ($domain_name ne ""))
       {
         %conf = ();
         foreach my $setting (keys %root_conf_hash)
