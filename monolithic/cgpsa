@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -85,7 +85,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.1";
+our $VERSION = "1.2.1a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -683,6 +683,8 @@ sub checkMessageAddHeader
       # For SpamAssassin 2.5x, this is very ugly and relies on things 
       # internal to SpamAssassin
       
+      my $added_sa_version_header = 0;
+      
       if ($Mail::SpamAssassin::VERSION < 2.6)
       {
         if ($status->is_spam() || 
@@ -726,31 +728,39 @@ sub checkMessageAddHeader
       {
         $status->rewrite_headers();
         $newheaders = "";
+        my $headerlist;
+        
         if ($status->is_spam())
         {
-          foreach my $header (keys %{$status->{conf}->{headers_spam}})
-          {
-            $newheaders .= "X-Spam-$header: ".
-                           $status->{msg}->get_header("X-Spam-$header").
-                           "\e";
-          }
+          $headerlist = $status->{conf}->{headers_ham};
         }
         else
         {
-          foreach my $header (keys %{$status->{conf}->{headers_ham}})
-          {
-            $newheaders .= "X-Spam-$header: ".
-                           $status->{msg}->get_header("X-Spam-$header").
-                           "\e";
-          }
+          $headerlist = $status->{conf}->{headers_spam};
         }
+
+        foreach my $header (keys %{$headerlist})
+        {
+          $newheaders .= "X-Spam-$header: ".
+                         $status->{msg}->get_header("X-Spam-$header").
+                         "\e";
+        }
+        
+        if (exists $headerlist->{Checker-Version})
+        {
+          $added_sa_version_header = 1;
+        }          
       }
       
-      # always add CGPSA Version and SpamAssassin Version headers, and the
-      # loop prevention header
-      $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
-                     Mail::SpamAssassin::Version().
-                     " ($Mail::SpamAssassin::SUB_VERSION)\e";
+      # add X-Spam-Checker-Version if it isn't there already
+      if (!$added_sa_version_header)
+      {
+        $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
+                       Mail::SpamAssassin::Version().
+                       " ($Mail::SpamAssassin::SUB_VERSION)\e";
+      }
+      
+      # always add CGPSA Version header and loop prevention header
       $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
       $newheaders .= $conf->{loop_prevention_header}.": Scanned\e";
       
@@ -822,11 +832,8 @@ sub checkMessage
       ($home_dir."/.spamassassin/user_prefs");
   }
   
-  if ($conf->{use_user_state} && $Mail::SpamAssassin::VERSION >= 2.5)
+  if ($conf->{use_user_state})
   {
-    # SpamAssassin prior to 2.50 can't change user state directories
-    # on the fly, unfortunately...
-    
     $spamassassin->signal_user_changed 
       ({
         username => $account_name,
