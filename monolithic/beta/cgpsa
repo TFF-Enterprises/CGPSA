@@ -113,7 +113,6 @@ use Storable qw/freeze thaw/;
 # Signal handlers
 
 $SIG{'HUP'} = \&signalHUP;
-$SIG{'CHLD'} = \&signalCHLD;
 
 # Version string for this filter.
 
@@ -178,34 +177,6 @@ mainLoop();
 #
 # Subroutines
 #
-
-# Catches a SIGCHLD signal, and removes the child from the process list
-
-sub signalCHLD
-{
-  our %pids;
-  my $pid;
- 
-  $pid = waitpid(-1, &WNOHANG);
-  
-  if ($pid == -1)
-  {
-    # no child waiting, so do nothing
-  }
-  elsif (WIFEXITED($?))
-  {
-    # a child exited
-    
-    delete $pids{$pid};
-  }
-  else
-  {
-    # false alarm, do nothing
-  }
-  
-  $SIG{'CHLD'} = \&signalCHLD;
-}
-
 
 # Catches a SIGHUP signal, and sets a flag accordingly. 
 
@@ -472,6 +443,17 @@ sub mainLoop
       processHUP();
     }
 
+    # Give child processes a chance to be cleaned up...
+  
+    foreach $pid (keys %pids)
+    {
+      if (waitpid($pid, &WNOHANG) == -1)
+      {
+        # child $pid has terminated
+        delete $pids{$pid};
+      }
+    }
+    
     if ($request =~ /([0-9]+)\s*([A-Za-z]+)\s*(.*)/si) 
     {
       $seqnum = $1;
@@ -1143,8 +1125,8 @@ sub checkMessage
   
   # Finally, read the user preferences if they're supposed to be used
   
-  if (($user_conf != $domain_conf) && $domain_conf->{allow_user_prefs} && 
-      $user_conf->{use_user_prefs})
+  if (($account_dir ne $domain_conf->{default_home_dir}) &&
+      $domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
     $spamassassin->read_scoreonly_config
       ($account_dir."/.spamassassin/user_prefs");

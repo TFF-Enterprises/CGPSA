@@ -37,7 +37,9 @@
 # Information on user-configurable options is available in the sample 
 # configuration file supplied with the filter, which must be installed as
 # "<your CGP base directory>/Settings/cgpsa.conf" (unless you
-# change the "$root_config_directory" or "$root_config_pathname" variable below). 
+# change the "$root_config_directory" or "$root_config_pathname" variable 
+# below). 
+#
 # Note that you _must_ properly set the "$cgp_base" variable below for this
 # filter to work at all.
 
