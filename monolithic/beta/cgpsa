@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3b2
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3b1";
+our $VERSION = "1.3b2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1542,7 +1542,7 @@ sub process_file
     
     # first, submit a message for all remote addresses
     
-    if ($#remote_recipients >= 0) 
+    if (scalar(@remote_recipients) > 0) 
     {
       debug(7, "Submitting message for ".scalar(@remote_recipients).
                " addresses without SpamAssassin run");
@@ -1603,7 +1603,7 @@ sub process_file
           }
         }
         
-        if ($#no_dma_list > 0)
+        if (scalar(@no_dma_list) > 0)
         {
           submitMessage(\$cli, [($rewritten_msg)], $return_path, "",
                         @no_dma_list);
