@@ -994,9 +994,9 @@ sub checkMessage
   if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
-    $domain_conf = $domain_conf_cache{$domain_name};
   }
   
+  $domain_conf = $domain_conf_cache{$domain_name};
   $user_conf = $user_conf_cache{$account_name};
   
   # if the message is longer than 128K characters, scan only the first
