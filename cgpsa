@@ -7,21 +7,23 @@
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
 #
-# This CommuniGate Pro filter takes messages from CommuniGate Pro
-# and checks them with SpamAssassin. It performs one SpamAssassin
-# operation per local user to which the message is addressed, and 
-# has the ability to use per-user preferences, which are stored in
-# the user's CommuniGate Pro account directory.
+# This CommuniGate Pro filter takes messages from CommuniGate Pro and
+# checks them with SpamAssassin. It has the ability to use per-user 
+# preferences, which are stored in the user's CommuniGate Pro account 
+# directory, as well as to use systemwide preferences (either exclusively or
+# just for those users that don't have individual preferences), and performs
+# one SpamAssassin check per preferences set applicable to a given message.
 #
-# Scanned messages are resubmitted to CommuniGate using the PIPE
-# module. Messages to non-local accounts are left untouched.
-#
+# Scanned messages are resubmitted to CommuniGate using the PIPE module.
+# Messages to non-local accounts, and to accounts for which preferences
+# (individual or systemwide) are unavailable, are left untouched.
 #
 # Rules that invoke this filter should have the condition that "any route
 # is "LOCAL*", because if no destination addresses are local the filter will 
 # simply cause a delay in message processing without changing anything.
 # The filter can safely be used with multiple CommuniGate Pro enqueuer 
-# threads. 
+# threads; in this case, your server must be set to allow at least as many 
+# concurrent PWD connections as you have enqueuer threads.
 #
 # Information on user-configurable options is available in the sample 
 # configuration file supplied with the filter, which must be installed as
@@ -574,16 +576,15 @@ sub readConfigFile
     $conf->{cgp_hostname} = "localhost";
     $conf->{cgp_port} = 106;
     $conf->{loop_prevention_header} = "X-TFF-SpamAssassin-Filter";
-    $conf->{debug} = 0;
-    $conf->{debug_level} = 0;
+    $conf->{debug} = 1;
+    $conf->{debug_level} = 9;
+    $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
     $conf->{use_user_prefs} = 1;
     $conf->{require_user_prefs} = 1;
     $conf->{use_user_state} = 1;
     $conf->{use_auto_whitelist} = 1;
     $conf->{do_network_tests} = 1;
     $conf->{stop_at_threshold} = 0;
-    $conf->{default_home_dir} = "/var/CommuniGate/Settings/SpamAssassin";
-    $conf->{testing} = 0;
     
     my @text = (<IN>);
     close(IN);
@@ -623,6 +624,10 @@ sub readConfigFile
         {
             $conf->{debug_level} = scalar($1);
         }
+        elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(\S+)$/) 
+        {
+            $conf->{default_home_dir} = $1;
+        }
         elsif ($line =~ /^use[-_]user[-_]prefs[\s\=]+(\S+)$/) 
         {
             $conf->{use_user_prefs} = evaluateBoolean($1);
@@ -646,10 +651,6 @@ sub readConfigFile
         elsif ($line =~ /^stop[-_]at[-_]threshold[\s\=]+(\S+)$/) 
         {
             $conf->{stop_at_threshold} = evaluateBoolean($1);
-        }
-        elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(\S+)$/) 
-        {
-            $conf->{default_home_dir} = $1;
         }
         elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(\S+)$/) 
         {
