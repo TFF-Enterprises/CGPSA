@@ -1028,7 +1028,14 @@ sub checkMessage
   our $root_conf;
     
   $domain_conf = $domain_conf_cache{$domain_name};
-  $user_conf = $user_conf_cache{$account_name};
+  if ($account_name ne "<default>")
+  {
+    $user_conf = $user_conf_cache{$account_name};
+  }
+  else
+  {
+    $user_conf = $domain_conf;
+  }
   
   # if the message is longer than 128K characters, scan only the first
   # 128K characters
@@ -1065,7 +1072,8 @@ sub checkMessage
     
   # Next, read the domain preferences if they're supposed to be used
   
-  if ($domain_conf->{use_domain_prefs} && ($domain_name ne ""))
+  if (($domain_conf != $root_conf) && $domain_conf->{use_domain_prefs} && 
+      ($domain_name ne ""))
   {
     $spamassassin->read_scoreonly_config
       ($domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
@@ -1076,7 +1084,8 @@ sub checkMessage
   
   # Finally, read the user preferences if they're supposed to be used
   
-  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
+  if (($user_conf != $domain_conf) && $domain_conf->{allow_user_prefs} && 
+      $user_conf->{use_user_prefs})
   {
     $spamassassin->read_scoreonly_config
       ($account_dir."/.spamassassin/user_prefs");
@@ -1876,29 +1885,40 @@ sub loadDomainConfig
   }
   elsif (!(exists $domain_conf_cache{$domain_name}))
   {
-    debug(8, "Attempting to load domain configuration for ".$domain_name);
+    if ($root_conf->{allow_domain_prefs})
+    {
+      debug(8, "Attempting to load domain configuration for ".$domain_name);
     
-    # initialize it to the root configuration
+      # initialize it to the root configuration
   
-    foreach my $setting (keys %root_conf_hash)
-    {
-      $conf{$setting} = $root_conf_hash{$setting};
-    }
+      foreach my $setting (keys %root_conf_hash)
+      {
+        $conf{$setting} = $root_conf_hash{$setting};
+      }
     
-    readConfigFile
-      (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
+      readConfigFile
+        (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
 
-    if (!$conf{no_configuration})
-    {
-      # we successfully loaded something, let's cache it
-      debug(8, "Loaded domain configuration for ".$domain_name);
-      $domain_conf_cache{$domain_name} = \%conf;
+      if (!$conf{no_configuration})
+      {
+        # we successfully loaded something, let's cache it
+        
+        debug(8, "Loaded domain configuration for ".$domain_name);
+        $domain_conf_cache{$domain_name} = \%conf;
+      }
+      else
+      {
+        # we didn't load anything, so for this domain we use the root
+        # preferences
+        
+        debug(8, "Using root configuration for ".$domain_name);
+        $domain_conf_cache{$domain_name} = $root_conf;
+      }
     }
     else
     {
-      # we didn't load anything, so for this domain we use the root
-      # preferences
-      debug(8, "Using root configuration for ".$domain_name);
+      # we didn't load anything because domain configurations are disallowed
+      
       $domain_conf_cache{$domain_name} = $root_conf;
     }
   }
@@ -1936,27 +1956,39 @@ sub loadUserConfig
   
   if (!(exists $user_conf_cache{$user_name}))
   {
-    debug(8, "Attempting to load user configuration for ".$user_name);
-
-    # initialize to values of domain configuration
-    foreach my $setting (keys %{$domain_conf})
+    if ($domain_conf->{allow_user_prefs})
     {
-      $conf{$setting} = $domain_conf->{$setting};
-    }
+      debug(8, "Attempting to load user configuration for ".$user_name);
 
-    readConfigFile(\%conf, $settings_directory.our $user_config_filename);
+      # initialize to values of domain configuration
+    
+      foreach my $setting (keys %{$domain_conf})
+      {
+        $conf{$setting} = $domain_conf->{$setting};
+      }
 
-    if (!$conf{no_configuration})
-    {
-      # we successfully loaded something, let's cache it
-      debug(8, "Loaded user configuration for ".$user_name);
-      $user_conf_cache{$user_name} = \%conf;
+      readConfigFile(\%conf, $settings_directory.our $user_config_filename);
+
+      if (!$conf{no_configuration})
+      {
+        # we successfully loaded something, let's cache it
+      
+        debug(8, "Loaded user configuration for ".$user_name);
+        $user_conf_cache{$user_name} = \%conf;
+      }
+      else
+      {
+        # we didn't load anything, so for this domain we use the root
+        # preferences
+      
+        debug(8, "Using domain configuration for ".$user_name);
+        $user_conf_cache{$user_name} = $domain_conf;
+      }
     }
     else
     {
-      # we didn't load anything, so for this domain we use the root
-      # preferences
-      debug(8, "Using domain configuration for ".$user_name);
+      # we didn't load anything because user configurations are disallowed
+      
       $user_conf_cache{$user_name} = $domain_conf;
     }
   }
