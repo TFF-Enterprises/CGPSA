@@ -392,7 +392,7 @@ sub mainLoop
   
     foreach $pid (keys %pids)
     {
-      if (waitpid($pid, &WNOHANG) < -1)
+      if (waitpid($pid, &WNOHANG) == -1)
       {
         # child $pid has terminated
         delete $pids{$pid};
