@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -85,7 +85,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2";
+our $VERSION = "1.2.1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -845,7 +845,7 @@ sub checkMessage
       {
         if ($header_name =~ /X-Spam-.*/)
         {
-          delete $mail->{headers}->{$header_name};
+          $mail->delete_header($header_name);
         }
       }
     
