@@ -737,11 +737,11 @@ sub checkMessageAddHeader
         
         if ($status->is_spam())
         {
-          $headerlist = $status->{conf}->{headers_ham};
+          $headerlist = $status->{conf}->{headers_spam};
         }
         else
         {
-          $headerlist = $status->{conf}->{headers_spam};
+          $headerlist = $status->{conf}->{headers_ham};
         }
 
         foreach my $header (keys %{$headerlist})
