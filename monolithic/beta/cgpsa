@@ -726,7 +726,6 @@ sub submitMessage
                 "\"".$user_conf->{spam_mailbox_name}."#".$address."\"";
             }
         
-            $orig_address = $address;
             @addresses = ();
             push(@addresses, $receiver_address);
           }
