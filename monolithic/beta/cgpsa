@@ -1310,7 +1310,7 @@ sub checkMessage
     {
       $rewritten_mail->delete_header($root_conf->{loop_prevention_header});
       $rewritten_mail->header
-        ($root_conf->{loop_prevention_header}, "Scanned");
+        ($root_conf->{loop_prevention_header}, "Scanned\n");
     }
   }
     
@@ -1324,7 +1324,7 @@ sub checkMessage
     $rewritten_mail->delete_header($VERSIONHEADERNAME);
     $rewritten_mail->header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
     $rewritten_mail_scalar = 
-        $rewritten_mail->get_all_headers() . "\n" . 
+        $rewritten_mail->get_all_headers(1) . "\n" . 
         $rewritten_mail->get_pristine_body();
   }
   
