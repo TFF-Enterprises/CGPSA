@@ -1184,7 +1184,8 @@ sub checkMessage
   {
     $sa2_user_dir = $account_dir;
     $sa3_userstate_dir = $account_dir.$sa_prefs_dir_suffix;
-    debug(8, "State directory is user home directory ".$userstate_dir);
+    debug(8, "State directory is in user home directory (".
+             $sa3_userstate_dir.")");
   }
   elsif ($domain_conf->{use_domain_state} && 
          $domain_conf->{default_home_dir} ne $root_conf->{default_home_dir})
@@ -1192,13 +1193,13 @@ sub checkMessage
     $sa2_user_dir = $domain_conf->{default_home_dir};
     $sa3_userstate_dir = 
       $domain_conf->{default_home_dir}.$sa_prefs_dir_suffix;
-    debug(8, "State directory is domain default home directory ".
-             $userstate_dir);
+    debug(8, "State directory is in domain default home directory (".
+             $sa3_userstate_dir.")");
   }
   else
   {
-    debug(8, "State directory is system default home directory ".
-             $userstate_dir);
+    debug(8, "State directory is in system default home directory (".
+             $sa3_userstate_dir.")");
   }
     
   if ($root_conf->{spamassassin_api_version} == 3)
