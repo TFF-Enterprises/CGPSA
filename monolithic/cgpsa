@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.4
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.5
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -91,7 +91,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.4";
+our $VERSION = "1.2.5";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -260,7 +260,7 @@ sub loadPreferences
   # problems with Perl's Taint Mode.
   
   $ENV{'HOME'} = $conf->{default_home_dir}; 
-  $ENV{'PATH'} = "";
+  $ENV{'PATH'} = $conf->{helper_path};
   
   if (!(-r $conf->{default_home_dir} && -w _ && -x _ && -d _))
   {
@@ -335,19 +335,25 @@ sub loadPreferences
   if ($conf->{sa_prefix} ne "")
   {
     print("* Custom SpamAssassin Installation Prefix: \n*     ".
-          $conf->{sa_prefix});
+          $conf->{sa_prefix}."\n");
   }
   
   if ($conf->{sa_default_rules_dir} ne "")
   {
     print("* Custom SpamAssassin Default Rules Directory: \n*     ".
-          $conf->{sa_default_rules_dir});
+          $conf->{sa_default_rules_dir}."\n");
   }
   
   if ($conf->{sa_local_rules_dir} ne "")
   {
     print("* Custom SpamAssassin Local Rules Directory: \n*     ".
-          $conf->{sa_local_rules_dir});
+          $conf->{sa_local_rules_dir}."\n");
+  }
+  
+  if ($conf->{helper_path} ne "")
+  {
+    print("* SpamAssassin Helper Path: \n*     ".
+          $conf->{helper_path}."\n");
   }
   
   print("* Default SpamAssassin Settings Location: \n");
@@ -1333,6 +1339,7 @@ sub readConfigFile
   $conf->{debug_level} = 9;
   $conf->{sa_debug} = 0;
   $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
+  $conf->{helper_path} = "";
   $conf->{sa_prefix} = "";
   $conf->{sa_default_rules_dir} = "";
   $conf->{sa_local_rules_dir} = "";
@@ -1429,6 +1436,14 @@ sub readConfigFile
     {
       $conf->{default_home_dir} = $1;
     }
+    elsif ($line =~ /^helper[-_]path[\s\=]+(.+)$/)
+    {
+      $conf->{helper_path} = $1;
+    }
+    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(.+)$/) 
+    {
+      $conf->{helper_state_dir} = $1;
+    }
     elsif ($line =~ /^use[-_]user[-_]prefs[\s\=]+(\S+)$/) 
     {
       $conf->{use_user_prefs} = evaluateBoolean($1);
@@ -1472,10 +1487,6 @@ sub readConfigFile
     elsif ($line =~ /^sa[-_]local[-_]rules[-_]dir[\s\=]+(.+)$/)
     {
       $conf->{sa_local_rules_dir} = $1;
-    }
-    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(.+)$/) 
-    {
-      $conf->{helper_state_dir} = $1;
     }
    elsif ($line =~ /^absolute[-_]queue[-_]filenames[\s\=]+(\S+)$/) 
     {
