@@ -705,7 +705,7 @@ sub submitMessage
             if ($address =~ /^(.*)#(\S*)@(\S*)$/)
             {
               # it already has a DMA, so we remove it and put it in
-              # an X-Originally-To header
+              # an X-Original-To header
               
               $orig_address = "\"".$1."#".$2."\"@".$3;
               $receiver_address = 
@@ -750,7 +750,7 @@ sub submitMessage
     print OUTFILE "Envelope-To: <".$local_addr.">\n";
     if ($orig_address ne "")
     {
-      print OUTFILE "X-CGPSA-Originally-To: ".$orig_address."\n";
+      print OUTFILE "X-TFF-CGPSA-Original-To: ".$orig_address."\n";
     }
   }
   print OUTFILE @$msg_ptr;
