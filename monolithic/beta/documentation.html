@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1b1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1b2</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -40,13 +40,13 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a
 href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
 tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
-<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a>,
-released 17 June 2003.</p>
+<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_8.tgz">1.0.8</a>,
+released 18 June 2003.</p>
 
 <p>The current beta version of CGPSA is <a
-href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b1.tgz">1.1b1</a
->, released 17 June 2003. Information about new features of 1.1b1 can be
-found in the <a href="#history">revision history</a>.</p>
+href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b2.tgz">1.1b2</a
+>, released 18 June 2003. Information about new features of the 1.1 betas
+can be found in the <a href="#history">revision history</a>.</p>
 
 <h2>Documentation</h2>
 
@@ -328,7 +328,22 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1.1b1.tgz">1.1b1</a> - 17 June 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b2.tgz">1.1b2</a> - 18 June 2003</dt>
+<dd>
+<p>Changes</p>
+<ul>
+<li>Parallel requests mode is now turned on by default on non-Windows 
+platforms (this change was actually in 1.1b1, but didn't make the release
+notes).</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed an issue with the generation of random filenames that could have, 
+on certain systems, resulted in message loss when using parallel 
+requests (this is the same bug fix as in 1.0.8).</li>
+</ul>
+</dd>
+<dt>1.1b1 - 17 June 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -370,6 +385,15 @@ going away).</li>
 <li>Entries in the CGP log that are line-wrapped have "\t" as their leading
 character when CGPSA is used with Perl earlier than 5.8. This is a result of
 limitations in the older Text::Wrap code.</li>
+</ul>
+</dd>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_0_8.tgz">1.0.8</a> - 18 June 2003</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed an issue with the generation of random filenames that could have, 
+on certain systems, resulted in message loss when using parallel 
+requests.</li>
 </ul>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a> - 17 June 2003</dt>
@@ -511,7 +535,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-17 June 2003<br />
+18 June 2003<br />
 </address>
 </body>
 </html>
