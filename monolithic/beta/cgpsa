@@ -87,6 +87,12 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 our $domain_prefix = $cgp_base."Domains/";
 our $domain_config_suffix = "/".$domain_config_directory."cgpsa.conf";
 
+# The name to use for CGPSA user configuration files. This name will be
+# appended to the path to the user's "account.web" directory to find their
+# CGPSA configuration.
+
+our $user_config_filename = ".cgpsa.conf";
+
 #
 # End of Customizable Variables
 # Don't modify anything below this line unless you're absolutely
@@ -137,19 +143,21 @@ print("* TFF Enterprises CGPSA Filter $VERSION Starting\n");
 
 # Declare some "global" variables.
 
-our %root_conf = ();
+our %root_conf_hash = ();
+our $root_conf = \%root_conf_hash;
 our %domain_conf_hash = ();
+our %user_conf_hash = ();
 our @scan_domains = undef;
 our $spamassassin = undef;
 
 # Load Time::HiRes if available
 
-$root_conf{have_time_hires} = 0;
+$root_conf->{have_time_hires} = 0;
 
 eval 
 { 
   require Time::HiRes; 
-  $root_conf{have_time_hires} = 1;
+  $root_conf->{have_time_hires} = 1;
 };
   
 
@@ -178,7 +186,6 @@ sub signalHUP
 
 sub processHUP
 {
-  our $spamassassin;
   our %pids;
   my $pid;
   
@@ -197,13 +204,18 @@ sub processHUP
         " HUP Signal Received, Re-initializing CGPSA.\n");
   select STDOUT;
 
-  if ($root_conf{redirect_stderr})
+  if ($root_conf->{redirect_stderr})
   {
     # stderr is redirected, so output to stdout as well
     print("* HUP Signal Received, Re-initializing CGPSA.\n");
   }
 
-  undef $spamassassin;
+  undef our $spamassassin;
+  undef our @scan_domains;
+  undef our %root_conf_hash;
+  undef our $root_conf;
+  undef our %domain_conf_hash;
+  undef our %user_conf_hash;
   
   initialize();
   unlockStandardOutput();
@@ -219,11 +231,13 @@ sub processHUP
 
 sub initialize
 {
-  our($root_config_pathname, $root_conf, $VERSION);
+  our $root_config_pathname;
+  our $root_conf;
+  our $VERSION;
   
   print("* Loading Configuration File ".$root_config_pathname."\n");
   loadRootConfig();
-  if ($root_conf{no_configuration})
+  if ($root_conf->{no_configuration})
   {
     # Exit if there's no configuration, since we can't do anything useful.
     
@@ -232,7 +246,7 @@ sub initialize
   print("* Configuration File Loaded\n");
   
   print("* Parallel Requests Mode: ");
-  if ($root_conf{parallel_requests})
+  if ($root_conf->{parallel_requests})
   {
     print("On\n");
   }
@@ -241,15 +255,15 @@ sub initialize
     print("Off\n");
   }
   
-  if ($root_conf{max_requests} > 0)
+  if ($root_conf->{max_requests} > 0)
   {
-    print("* Max Requests: $root_conf{max_requests} - Be sure ". 
+    print("* Max Requests: $root_conf->{max_requests} - Be sure ". 
           "Auto-Restart is not disabled in CGP Helper Settings.\n");
   }
   
   # Redirect standard error to a file, if option is set.
   
-  if ($root_conf{redirect_stderr})
+  if ($root_conf->{redirect_stderr})
   {
     close(STDERR);
     open(STDERR, ">>$error_pathname");
@@ -262,7 +276,7 @@ sub initialize
   
   # Locale change, to "C", for SpamAssassin's well-being, if option is set.
   
-  if ($root_conf{use_c_locale})
+  if ($root_conf->{use_c_locale})
   {
     use POSIX qw(locale_h);
     $ENV{'LANG'} = "C";
@@ -275,17 +289,17 @@ sub initialize
   # dirs and the default home directory. We also set $ENV{'PATH'}, to avoid 
   # problems with Perl's Taint Mode.
   
-  $ENV{'HOME'} = $root_conf{default_home_dir}; 
-  $ENV{'PATH'} = $root_conf{helper_path};
+  $ENV{'HOME'} = $root_conf->{default_home_dir}; 
+  $ENV{'PATH'} = $root_conf->{helper_path};
   
-  if (!(-r $root_conf{default_home_dir} && -w _ && -x _ && -d _))
+  if (!(-r $root_conf->{default_home_dir} && -w _ && -x _ && -d _))
   {
     mkdir("$ENV{'HOME'}", 0700)
       or error_exit("Can't create default home directory $ENV{'HOME'}, ".
                     "exiting.");
   }
   
-  if (!(-r $root_conf{default_home_dir}."/.spamassassin" && 
+  if (!(-r $root_conf->{default_home_dir}."/.spamassassin" && 
         -w _ && -x _ && -d _))
   {
     mkdir("$ENV{'HOME'}/.spamassassin", 0700)
@@ -299,14 +313,14 @@ sub initialize
   our $spamassassin = Mail::SpamAssassin->new
     ({
       dont_copy_prefs => 1,
-      local_tests_only => !($root_conf{do_network_tests}),
-      stop_at_threshold => $root_conf{stop_at_threshold},
-      home_dir_for_helpers => $root_conf{helper_state_dir},
-      userstate_dir => $root_conf{default_home_dir}."/.spamassassin",
-      debug => $root_conf{sa_debug},
-      PREFIX => $root_conf{sa_prefix},
-      DEF_RULES_DIR => $root_conf{sa_default_rules_dir},
-      LOCAL_RULES_DIR => $root_conf{sa_local_rules_dir}
+      local_tests_only => !($root_conf->{do_network_tests}),
+      stop_at_threshold => $root_conf->{stop_at_threshold},
+      home_dir_for_helpers => $root_conf->{helper_state_dir},
+      userstate_dir => $root_conf->{default_home_dir}."/.spamassassin",
+      debug => $root_conf->{sa_debug},
+      PREFIX => $root_conf->{sa_prefix},
+      DEF_RULES_DIR => $root_conf->{sa_default_rules_dir},
+      LOCAL_RULES_DIR => $root_conf->{sa_local_rules_dir}
      });
     
   # Set up a persistent address list factory, for auto-whitelisting
@@ -317,16 +331,16 @@ sub initialize
   # If we're not using domain or user prefs, finish setting up 
   # SpamAssassin...
   
-  if (!$root_conf{use_domain_prefs} && !$root_conf{use_user_prefs})
+  if (!$root_conf->{use_domain_prefs} && !$root_conf->{use_user_prefs})
   {
-    if ($root_conf{use_auto_whitelist})
+    if ($root_conf->{use_auto_whitelist})
     {
       $spamassassin->set_persistent_address_list_factory($addrlistfactory);
     }
-    if (-e "$root_conf{default_home_dir}/.spamassassin/user_prefs")
+    if (-e "$root_conf->{default_home_dir}/.spamassassin/user_prefs")
     {
       $spamassassin->read_scoreonly_config
-        ($root_conf{default_home_dir}."/.spamassassin/user_prefs");
+        ($root_conf->{default_home_dir}."/.spamassassin/user_prefs");
     }
   }
   
@@ -347,34 +361,34 @@ sub initialize
   print("* Using SpamAssassin Version ".Mail::SpamAssassin::Version().
         " ($Mail::SpamAssassin::SUB_VERSION)\n");
   
-  if ($root_conf{sa_prefix} ne "")
+  if ($root_conf->{sa_prefix} ne "")
   {
     print("* Custom SpamAssassin Installation Prefix: \n*     ".
-          $root_conf{sa_prefix}."\n");
+          $root_conf->{sa_prefix}."\n");
   }
   
-  if ($root_conf{sa_default_rules_dir} ne "")
+  if ($root_conf->{sa_default_rules_dir} ne "")
   {
     print("* Custom SpamAssassin Default Rules Directory: \n*     ".
-          $root_conf{sa_default_rules_dir}."\n");
+          $root_conf->{sa_default_rules_dir}."\n");
   }
   
-  if ($root_conf{sa_local_rules_dir} ne "")
+  if ($root_conf->{sa_local_rules_dir} ne "")
   {
     print("* Custom SpamAssassin Local Rules Directory: \n*     ".
-          $root_conf{sa_local_rules_dir}."\n");
+          $root_conf->{sa_local_rules_dir}."\n");
   }
   
-  if ($root_conf{helper_path} ne "")
+  if ($root_conf->{helper_path} ne "")
   {
     print("* SpamAssassin Helper Path: \n*     ".
-          $root_conf{helper_path}."\n");
+          $root_conf->{helper_path}."\n");
   }
   
   print("* Default SpamAssassin Settings Location: \n");
-  if (-e "$root_conf{default_home_dir}/.spamassassin/user_prefs")
+  if (-e "$root_conf->{default_home_dir}/.spamassassin/user_prefs")
   {
-    print("*     $root_conf{default_home_dir}".
+    print("*     $root_conf->{default_home_dir}".
           "/.spamassassin/user_prefs\n");
   }
   else
@@ -447,7 +461,7 @@ sub mainLoop
         
         # Fork off a process, if we're running with parallel requests
         $pid = 0;
-        if ($root_conf{parallel_requests})
+        if ($root_conf->{parallel_requests})
         {         
           # generate a random number; this compensates for the fact that
           # the new process' random number generator is just initialized
@@ -458,7 +472,7 @@ sub mainLoop
         if ($pid == 0) 
         {
           process_file($parameter);
-          if ($root_conf{parallel_requests})
+          if ($root_conf->{parallel_requests})
           {
             # We're a finished child process, so we must...
             exit();
@@ -485,12 +499,12 @@ sub mainLoop
       }
     }
 
-    if (($root_conf{max_requests} > 0) && 
-        ($request_count >= $root_conf{max_requests}))
+    if (($root_conf->{max_requests} > 0) && 
+        ($request_count >= $root_conf->{max_requests}))
     {
       lockStandardOutput();
       print("* Handled maximum number of requests (".
-            $root_conf{max_requests}."), exiting.\n");
+            $root_conf->{max_requests}."), exiting.\n");
       unlockStandardOutput();
       last;
     }
@@ -515,7 +529,7 @@ sub mainLoop
 
 sub initializeCLI
 {
-  if ($root_conf{use_cli})
+  if ($root_conf->{use_cli})
   {
     eval { require CGP::CLI; };
      
@@ -539,10 +553,10 @@ sub initializeCLI
       while (!$cli)
       {
         $cli = new CGP::CLI
-          ({ PeerAddr => $root_conf{cgp_hostname},
-             PeerPort => $root_conf{cgp_port},
-             login    => $root_conf{cgp_username},
-             password => $root_conf{cgp_password}
+          ({ PeerAddr => $root_conf->{cgp_hostname},
+             PeerPort => $root_conf->{cgp_port},
+             login    => $root_conf->{cgp_username},
+             password => $root_conf->{cgp_password}
            });
        
          if (!$cli)
@@ -570,13 +584,13 @@ sub initializeCLI
       if ($cli->isSuccess)
       {
         # Support for the extension
-        $root_conf{route_mail_extension} = 1;
+        $root_conf->{route_mail_extension} = 1;
         debug(9, "CLI supports ROUTE ... MAIL extension");
       }
       else
       {
         # No support for the extension
-        $root_conf{route_mail_extension} = 0;
+        $root_conf->{route_mail_extension} = 0;
         debug(9, "CLI does not support ROUTE ... MAIL extension");
       }
       
@@ -586,20 +600,137 @@ sub initializeCLI
   }
 }
 
-# Submit a message (parameters are a pointer to the message body,
-# a return-path, and a list of envelope-to addresses) using the
-# CommuniGate Pro "Submitted" directory.
+
+# Finds or creates a mailbox belonging to the specified user and having
+# the specified name, using the specified CLI. 
+
+sub findOrCreateMailbox
+{
+  my ($account_name, $mailbox_name, $cli_ptr) = @_;
+  my $cli = ${$cli_ptr};
+  my $result = 0;
+  
+  debug(9, "Attempting to find mailbox ".$mailbox_name." in account ".
+           $account_name);
+  
+  # try to create the mailbox
+           
+  lockStandardOutput();
+  $result = $cli->CreateMailbox($account_name, $mailbox_name);
+  unlockStandardOutput();
+  
+  if (!$result)
+  {
+    # something went wrong, but what?
+    
+    if ($cli->getErrCode() == 532)
+    {
+      # the mailbox already exists
+      debug(9, "Mailbox ".$mailbox_name." already exists");
+      $result = 1;
+    }
+    else
+    {
+      # we couldn't create the mailbox
+      debug(9, "Mailbox ".$mailbox_name." could not be created");
+    }
+  }
+  else
+  { 
+    # the mailbox already existed
+    debug(9, "Mailbox ".$mailbox_name." created");
+    $result = 1;
+  }
+  
+  return $result;
+}
+   
+    
+# Submit a message using the CommmuniGate Pro "Submitted" directory.
+# Parameters are a pointer to the CommuniGate Pro CLI, a pointer to the
+# message body, a return-path, an destination account name, and a list of 
+# envelope-to addresses. If the destination account name is not "", we
+# attempt to do DMA delivery to the spam mailbox of the specified 
+# destination account, if the various preference files tell us to do so.
+# If the destination account is not "", only the first of the addresses
+# is used.
 
 sub submitMessage 
 {
-  my ($msg_ptr, $return_path, @addresses) = @_;
+  my ($cli_ptr, $msg_ptr, $return_path, $account_name, @addresses) = @_;
+  my $cli = ${$cli_ptr};
   my $filename = our $cgp_base."Submitted/".getUniqueFilename(@addresses);
+  my $orig_address = "";
+  
+  if ($account_name ne "")
+  {
+    # we need to attempt direct mailbox addressing to a spambox
+    # let's first get the domain and user prefs (both must have been 
+    # previously loaded) for the first element of the address list
+
+    my $address = @addresses[0];
+    my $domain_name = "";
+    if ($account_name =~ /\S*@(\S*)/)
+    {
+      $domain_name = $1;
+    }
+    my $domain_conf = $domain_conf_hash{$domain_name};
+    my $user_conf = $user_conf_hash{$account_name};
+    my $receiver_address = "";
+  
+    if ($cli && $user_conf->{use_dma_spam_mailbox})
+    {
+      # Verify that DMA is enabled on the server
+      my $local_settings;
+      if (my $local_settings = $cli->GetModule("LOCAL"))
+      {
+        my %local_settings_hash = %{$local_settings};
+        if ($local_settings_hash{DirectMailboxes} eq "YES")
+        {
+          # DMA is enabled! Create the DMA spam mailbox if necessary
+          debug(9, "DMA spam filing enabled for ".$address);
+          if (findOrCreateMailbox
+                ($account_name, $user_conf->{spam_mailbox_name}, \$cli))
+          {
+            # we found or created the mailbox, so let's modify the
+            # local address accordingly
+         
+            if ($address =~ /^\S*#(\S*)@(\S*)$/)
+            {
+              # it already has a DMA, so we remove it and put it in
+              # an X-Originally-To header
+              $receiver_address = 
+                $user_conf->{spam_mailbox_name}."#".$1."@".$2;
+            }
+            else
+            {
+              $receiver_address = 
+                $user_conf->{spam_mailbox_name}."#".$address;
+            }
+        
+            $orig_address = $address;
+            @addresses = ();
+            push(@addresses, $receiver_address);
+          }
+          else
+          {
+            debug(9, "Failed to create or locate DMA spam mailbox for ".
+                     $address);
+          }
+        }
+      }
+    }
+  }
   
   open(OUTFILE, ">$filename");
   print OUTFILE "Return-Path: <".$return_path.">\n";
   foreach my $local_addr (@addresses) 
   {
     print OUTFILE "Envelope-To: <".$local_addr.">\n";
+    if ($orig_address ne "")
+    {
+      print OUTFILE "X-CGPSA-Originally-To: ".$orig_address."\n";
+    }
   }
   print OUTFILE @$msg_ptr;
   close(OUTFILE);
@@ -607,26 +738,26 @@ sub submitMessage
 }
     
   
-# Determine the "effective home directory" for SpamAssassin with respect to
-# a specified user using a specified CommuniGate Pro CLI. The result depends 
-# not only on whether there is a ".spamassassin/user_prefs" file in the
-# user's CommuniGate Pro settings directory, but also on whether the root
-# configuration and/or the user's domain's configuration is set to use  
-# (and/or require) user preferences. A return value of undef means that 
-# SpamAssassin should not be run for the specified user.
+# Load information for the specified user using the specified CommuniGate 
+# Pro CLI. This determines the "effective home directory" for SpamAssassin,
+# based on the root configuration, the domain configuration (if any), the
+# user configuration (if any), and the presence or absence of a 
+# ".spamassassin/user_prefs" file in the user's CommuniGate Pro 
+# "account.web" directory.  A return value of undef means that SpamAssassin 
+# should not be run for the specified user.
 #
-# In CGPSA 1.1 and higher, the location for user settings has been changed.
-# This function will automatically move user settings detected in the old
-# location to the new location, as necessary.
+# In CGPSA 1.1, the location for user settings was changed. This function 
+# will automatically move user settings detected in the old location to the 
+# new location, as necessary.
 
-sub getEffectiveHomeDirectory
+sub getUserInformation
 {
   my ($cli_ptr, $account_name) = @_;
   my $cli = ${$cli_ptr};
   my $account_dir = $cli->GetAccountLocation($account_name);
   my $domain_name = "";
   
-  if ($account_name =~ /.*@(.*)/)
+  if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
   }
@@ -641,15 +772,14 @@ sub getEffectiveHomeDirectory
     $account_dir = $cgp_base."Accounts/".$account_dir;
   }
 
-  # get the domain configuration so we can see if we need to use the
-  # user directory or the domain directory, or if we don't want to run
-  # SpamAssassin at all...
-  
-  loadDomainConfig($domain_name);
+  # get the user's configuration (this also loads the domain's configuration
+  # because it needs it to do the configuration inheritance).
+  loadUserConfig($account_name, $account_dir."/account.web/");    
   my $domain_conf = $domain_conf_hash{$domain_name};
+  my $user_conf = $user_conf_hash{$account_name};
   
   # check to see if old preferences directory needs to be relocated
-  if ($domain_conf->{use_user_prefs} && $account_dir)
+  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
     if (-e "$account_dir/.spamassassin")
     {
@@ -674,7 +804,7 @@ sub getEffectiveHomeDirectory
   
   # ok, now we know the prefs - if they exist - are in the right place
   # so we choose the prefs file to use
-  if ($domain_conf->{use_user_prefs} && $account_dir &&  
+  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&  
       (-e "$account_dir/account.web/.spamassassin/user_prefs"))
   {
     # the user has preferences, so let's use them
@@ -691,7 +821,7 @@ sub getEffectiveHomeDirectory
     else
     {
       # the global default home directory is the effective home directory
-      $account_dir = $root_conf{default_home_dir};
+      $account_dir = $root_conf->{default_home_dir};
     }
   }
   else
@@ -793,7 +923,7 @@ sub checkMessageAddHeader
       
       # always add CGPSA Version header and loop prevention header
       $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
-      $newheaders .= $root_conf{loop_prevention_header}.": Scanned\e";
+      $newheaders .= $root_conf->{loop_prevention_header}.": Scanned\e";
       
       if ((length $newheaders) > 4096)
       {
@@ -816,7 +946,7 @@ sub checkMessageAddHeader
                        Mail::SpamAssassin::Version().
                        " ($Mail::SpamAssassin::SUB_VERSION)\e";
         $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
-        $newheaders .= $root_conf{loop_prevention_header}.
+        $newheaders .= $root_conf->{loop_prevention_header}.
                        ": Scanned, Headers Truncated\e";
       }
       
@@ -831,7 +961,7 @@ sub checkMessageAddHeader
     
     debug(5, "SpamAssassin failed in ".sprintf("%.1f", getTime() - $start).
              " seconds: $@");
-    $newheaders = $root_conf{loop_prevention_header}.": Scan Failed\e";
+    $newheaders = $root_conf->{loop_prevention_header}.": Scan Failed\e";
   }
   
   # remove any double carriage returns...
@@ -848,20 +978,25 @@ sub checkMessageAddHeader
 
 sub checkMessage
 {
-  my ($msg_ptr, $home_dir, $account_name) = @_;
+  my ($msg_ptr, $account_name, $home_dir, $local_address, $is_spam_ptr) =
+    @_;
   my @scanlines;
   my $msg_length = 0;
   my $domain_name = "";
   my $domain_conf;
+  my $user_conf;
   my $sa_prefs_text = "";
   our $domain_conf_hash;
+  our $user_conf_hash;
   our $root_conf;
     
-  if ($account_name =~ /.*@(.*)/)
+  if ($account_name =~ /\S*@(\S*)/)
   {
     $domain_name = $1;
     $domain_conf = $domain_conf_hash{$domain_name};
   }
+  
+  $user_conf = $user_conf_hash{$account_name};
   
   # if the message is longer than 128K characters, scan only the first
   # 128K characters
@@ -888,15 +1023,15 @@ sub checkMessage
   # First, read the default preferences (only necessary if parallel requests
   # are not active, to "reset" the preferences)
   
-  if (!$root_conf{parallel_requests})
+  if (!$root_conf->{parallel_requests})
   {
     $spamassassin->read_scoreonly_config
-      ($root_conf{default_home_dir}."/.spamassassin/user_prefs");
+      ($root_conf->{default_home_dir}."/.spamassassin/user_prefs");
   }
     
   # Next, read the domain preferences if they're supposed to be used
   
-  if ($root_conf{use_domain_prefs})
+  if ($domain_conf->{use_domain_prefs})
   {
     $spamassassin->read_scoreonly_config
       ($domain_conf->{default_home_dir}."/.spamassassin/user_prefs");
@@ -904,7 +1039,7 @@ sub checkMessage
   
   # Finally, read the user preferences if they're supposed to be used
   
-  if ($domain_conf->{use_user_prefs})
+  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs})
   {
     $spamassassin->read_scoreonly_config
       ($home_dir."/.spamassassin/user_prefs");
@@ -914,7 +1049,8 @@ sub checkMessage
   # whitelisting is on for this domain, we set the persistent address
   # list factory.
   
-  if ($domain_conf->{use_auto_whitelist})
+  if ($domain_conf->{allow_auto_whitelist} &&
+      $user_conf->{use_auto_whitelist})
   {
     $spamassassin->set_persistent_address_list_factory
       (our $addrlistfactory);
@@ -929,9 +1065,9 @@ sub checkMessage
   # SpamAssassin to the default home directory for this domain; otherwise,
   # we point SpamAssassin to the default home directory for the root prefs.
   
-  my $state_dir = $root_conf{default_home_dir};
+  my $state_dir = $root_conf->{default_home_dir};
   
-  if ($domain_conf->{use_user_state})
+  if ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
     $state_dir = $home_dir;
   }
@@ -967,15 +1103,17 @@ sub checkMessage
       if ($status->is_spam) 
       { 
         $was_it_spam = "Identified spam"; 
+        ${$is_spam_ptr} = 1;
       } 
       else 
       { 
         $was_it_spam = "Identified non-spam"; 
+        ${$is_spam_ptr} = 0;
       }
       my $msg_score = sprintf("%.1f", $status->get_hits);
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
-      debug(5, "$was_it_spam ($msg_score/$msg_threshold) for ".
-               "$account_name in ".sprintf("%.1f", getTime() - $start).
+      debug(5, $was_it_spam." (".$msg_score."/".$msg_threshold.") for ".
+               $local_address." in ".sprintf("%.1f", getTime() - $start).
                " seconds");
 
       $status->finish();
@@ -987,14 +1125,15 @@ sub checkMessage
     # Something bad happened with SpamAssassin
     
     $mail->replace_header
-      ($root_conf{loop_prevention_header}, "Scan Failed");
-
-    debug(5, "SpamAssassin failed for $account_name in ".
+      ($root_conf->{loop_prevention_header}, "Scan Failed");
+    ${$is_spam_ptr} = 0;
+    
+    debug(5, "SpamAssassin failed for $local_address in ".
              sprintf("%.1f", getTime() - $start)." seconds: $@");
   }
   else
   {
-    $mail->replace_header($root_conf{loop_prevention_header}, "Scanned");
+    $mail->replace_header($root_conf->{loop_prevention_header}, "Scanned");
   }
     
   $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
@@ -1012,14 +1151,19 @@ sub process_file
 {
   my $filename = shift;
   our $seqnum;
-  my ($return_path, @local_addresses_custom, @account_dirs_custom,
-      @local_addresses_default, @remote_addresses, @msglines, $cgp_header,
-      $all_destination);
-    
+  my $return_path;
+  my @msglines;
+  my $cgp_header;
+  my $all_destination;
+  my %default_recipients = ();
+  my %custom_recipient_accts = ();
+  my %custom_recipient_dirs = ();
+  my @remote_recipients;
+      
   # ensure the queue file exists
   
   chomp($filename);
-  if (!$root_conf{absolute_queue_filenames}) 
+  if (!$root_conf->{absolute_queue_filenames}) 
   {
     $filename = our $cgp_base.$filename;
   };
@@ -1035,13 +1179,13 @@ sub process_file
   
   my $cli = undef;
   
-  if ($root_conf{use_cli})
+  if ($root_conf->{use_cli})
   {
     $cli = new CGP::CLI
-      ({ PeerAddr => $root_conf{cgp_hostname},
-         PeerPort => $root_conf{cgp_port},
-         login    => $root_conf{cgp_username},
-         password => $root_conf{cgp_password}
+      ({ PeerAddr => $root_conf->{cgp_hostname},
+         PeerPort => $root_conf->{cgp_port},
+         login    => $root_conf->{cgp_username},
+         password => $root_conf->{cgp_password}
        });
      
     if (!$cli) 
@@ -1085,7 +1229,7 @@ sub process_file
         if ($cli)
         {
           my $data; 
-          if ($root_conf{route_mail_extension})
+          if ($root_conf->{route_mail_extension})
           {
             $data = $cli->Route("\"$1\" MAIL");
           }
@@ -1098,6 +1242,7 @@ sub process_file
           
           my $module = $data->[0];
           my $host = $data->[1];
+          my $dma_mailbox = $data->[2];
           $data = undef;
           
           if ($cli->isSuccess) 
@@ -1111,85 +1256,153 @@ sub process_file
               my $local_address = $raw_recipient;
               my $domain_name = "";
               my $domain_conf;
-              if ($host =~ /.*@(.*)/)
+              if ($host =~ /\S*@(\S*)/)
               {
                 $domain_name = $1;
               }
               loadDomainConfig($domain_name);
               $domain_conf = $domain_conf_hash{$domain_name};
               
-              if ($domain_conf->{direct_mailbox_rewrite})
+              if (!$default_recipients{$domain_name})
               {
-                # if there's direct mailbox addressing, we need to 
-                # replace it by account detail. we just replace the
-                # first "#" in the address by "+"; this is safe,
-                # because anything after the "+" is considered
-                # part of the account detail.
-                
-                $local_address =~ s/#/\+/;
-                debug(8, "Rewrote DMA as account detail: $local_address");
+                %{$default_recipients{$domain_name}} = ();
               }
               
               if ($host =~ /\*@(\S*)/)
               {
                 # this is an "all@" message, so we need to process it with
                 # ADDHEADER for security reasons (since PIPE is a trusted
-                # source - silly CGP)
-                
+                # source - silly CGP); this short-circuits everything else
+                  
                 debug(8, "all@ recipient address detected, using ".
                          "ADDHEADER mode for all recipients");
                 $all_destination = 1;
               }
-              elsif (($raw_recipient =~ /(\S*)#(\S*)/) &&
-                      !$domain_conf->{direct_mailbox_scan})
+              
+              if ($domain_conf->{use_cgpsa} && !$all_destination)
               {
-                # there's DMA, so this is a "remote" address
-                debug(8, "Using direct mailbox addressing for ".
-                         $local_address. " (no scan)");
-                push(@remote_addresses, $local_address);
-              }
-              elsif ($domain_conf->{use_cgpsa})
-              {
-                # we have to attempt a scan
-                my $account_dir = 
-                  getEffectiveHomeDirectory(\$cli, $host);
-                debug(9, "Local address ".$local_address.", account name ".
-                         $host.", effective home directory ".
-                         $account_dir);
+                # Let's get the user's home directory and try to load 
+                # their preferences
+                my $account_dir = getUserInformation(\$cli, $host);
+                my $user_conf = $user_conf_hash{$host};
+                  
+                if ($user_conf->{direct_mailbox_rewrite} &&
+                    ($dma_mailbox ne ""))
+                {
+                  # there's direct mailbox addressing, and we're supposed 
+                  # to replace it by account detail. 
+                  
+                  # first, make sure account detail is enabled on the server
+                  
+                  my $local_settings;
+                  if (my $local_settings = $cli->GetModule("LOCAL"))
+                  {
+                    my %local_settings_hash = %{$local_settings};
+                    if ($local_settings_hash{Detailing} eq "Enabled")
+                    {
+                      # we can go ahead and rewrite the address
+                      if ($local_address =~ /^(\S*)#(\S*)@(\S*)$/)
+                      {
+                        # it's in a secondary domain
+                        $local_address = $2."+".$1."@".$3;
+                      }
+                      elsif ($local_address =~ /^(\S*)#(\S*)$/)
+                      {
+                        # it's in the main domain
+                        $local_address = $2."+".$1;
+                      }
+ 
+                      debug(8, "Rewrote DMA as account detail: ".
+                               $local_address);
+                    }
+                    else
+                    {
+                      debug(9, "DMA rewriting is enabled for ".$host.
+                               "but is not available on server");
+                    }
+                  }
+                  else
+                  {
+                    debug(9, "DMA rewriting is enabled for ".$host.
+                             "but cannot be detected on server");
+                  }
+                }
                 
-                if ($account_dir eq $root_conf{default_home_dir})
+                if (($local_address =~ /(\S*)#(\S*)/) &&
+                     !$user_conf->{direct_mailbox_scan})
                 {
-                  # use systemwide SpamAssassin prefs
-                  debug(8, "Using system default SpamAssassin settings ".
-                           "for ".$host); 
-                  push(@local_addresses_default, $local_address);
-                }
-                elsif ($account_dir eq $domain_conf->{default_home_dir})
-                {
-                  # use domain SpamAssassin prefs
-                  debug(8, "Using domain default SpamAssassin settings ".
-                           "for ".$host);
-                }
-                elsif ($account_dir)
-                {
-                  # use user's SpamAssassin prefs
-                  debug(8, "Using custom SpamAssassin settings for ".
-                           $host);
-                  push(@local_addresses_custom, $local_address);
-                  push(@account_dirs_custom, $account_dir);
+                  # there's DMA, so this is a "remote" address
+                  debug(8, "Using direct mailbox addressing for ".
+                           $local_address. " (no scan)");
+                  push(@remote_recipients, $local_address);
                 }
                 else
-                {
-                  # no SpamAssassin prefs => treat as remote
-                  debug(8, "No SpamAssassin settings found for ".$host);
-                  push(@remote_addresses, $local_address);
+                {                  
+                  if ($domain_conf->{allow_cgpsa} && 
+                      $user_conf->{use_cgpsa})
+                  {
+                    debug(9, "Local address ".$local_address.
+                          ", account name ".$host.
+                          ", effective home directory ".$account_dir);
+                
+                    if ($account_dir eq $root_conf->{default_home_dir})
+                    {
+                      # use systemwide SpamAssassin prefs
+                      debug(8, "Using system default SpamAssassin ".
+                               "settings for ".$host); 
+                      if ($user_conf->{use_dma_spam_mailbox})
+                      {
+                        $default_recipients{""}{$local_address} = $host;
+                      }
+                      else
+                      {
+                        $default_recipients{""}{$local_address} = "";
+                      }
+                    }
+                    elsif ($account_dir eq $domain_conf->{default_home_dir})
+                    {
+                      # use domain SpamAssassin prefs
+                      debug(8, "Using domain default SpamAssassin ". 
+                               "settings for ".$host);
+                      if ($user_conf->{use_dma_spam_mailbox})
+                      {
+                        $default_recipients{$domain_name}{$local_address} = 
+                          $host;
+                      }
+                      else
+                      { 
+                        $default_recipients{$domain_name}{$local_address} =
+                          "";
+                      }
+                    }
+                    elsif ($account_dir)
+                    {
+                      # use user's SpamAssassin prefs
+                      debug(8, "Using user customized SpamAssassin ".
+                               "settings for ".$host);
+                      $custom_recipient_accts{$local_address} = $host;
+                      $custom_recipient_dirs{$local_address} = $account_dir;
+                    }
+                    else
+                    {
+                      # no SpamAssassin prefs => treat as remote
+                      debug(8, "Not running SpamAssassin for ".$host);
+                      push(@remote_recipients, $local_address);
+                    }
+                  }
+                  else
+                  {
+                    debug(8, "CGPSA disabled by user configuration for ".
+                             $host);
+                    push(@remote_recipients, $local_address);
+                  }
                 }
               }
-              else
+              elsif (!$all_destination)
               {
                 debug(8, "CGPSA disabled by domain configuration for ".
                          $host);
-                push(@remote_addresses, $local_address);
+                push(@remote_recipients, $local_address);
               }
             }
             elsif (our @scan_domains)
@@ -1206,7 +1419,7 @@ sub process_file
                   debug(8, "Using default SpamAssassin settings for ".
                            "remote address ".$raw_recipient.
                            " (in scan domain $domain)");
-                  push(@local_addresses_default, $raw_recipient);
+                  $default_recipients{""}{$raw_recipient} = "";
                   $matched = 1;
                   last;
                 }
@@ -1216,21 +1429,24 @@ sub process_file
               {
                 # we didn't match any of the special domains, so let's
                 # treat the recipient as remote
-
-                push(@remote_addresses, $raw_recipient);
+                debug(8, "Not running SpamAssassin for remote address ".
+                         $raw_recipient);
+                push(@remote_recipients, $raw_recipient);
               }
             } 
             else 
             {
               # add the address to the remote list
-              push(@remote_addresses, $raw_recipient);
+              debug(8, "Not running SpamAssassin for remote address ".
+                       $raw_recipient);
+              push(@remote_recipients, $raw_recipient);
             }
           }
           else 
           {
             # Failed routing, probably a bad address, add to remote list.
             debug(9, "Unable to route address ".$raw_recipient);
-            push(@remote_addresses, $raw_recipient);
+            push(@remote_recipients, $raw_recipient);
           }
         }
         else 
@@ -1238,7 +1454,7 @@ sub process_file
           # no CLI, so...
           debug(8, "Using default SpamAssassin settings for ".
                    $raw_recipient);
-          push(@local_addresses_default, $raw_recipient);
+          $default_recipients{""}{$raw_recipient} = "";
         }
       }
       elsif ($line =~ /^P.*<(\S*@\S*)>/ && !$all_destination) 
@@ -1257,11 +1473,11 @@ sub process_file
       next;
     }
     
-    if ($line =~ /^$root_conf{loop_prevention_header}.*/) 
+    if ($line =~ /^$root_conf->{loop_prevention_header}.*/) 
     {
       # we've already processed this message, so let's not
       # waste time processing it again - be sure to clean up
-      # by closing thre CLI and the queue file
+      # by closing the CLI and the queue file
       
       debug(5, "Previously-scanned message detected");
       if ($cli)
@@ -1277,26 +1493,21 @@ sub process_file
     push(@msglines, $line);
   }
 
-  # close the CLI, if necessary, and the queue file
+  # close the queue file
   
-  if ($cli)
-  {
-    $cli->Logout();
-    undef $cli;
-  }
   close(MSGFILE);
   
   # Now determine our course of action
   
-  if ($root_conf{headers_only} || $all_destination)
+  if ($root_conf->{headers_only} || $all_destination)
   {
     # we're in "headers-only" mode, so we always run SA
     debug(7, "Running SpamAssassin in ADDHEADER mode");
     my $newheaders = checkMessageAddHeader(\@msglines, "");
     printResult("ADDHEADER", $newheaders);
   }
-  elsif (($#local_addresses_custom == -1) && 
-         ($#local_addresses_default == -1))
+  elsif ((scalar %default_recipients == 0) && 
+         (scalar %custom_recipient_accts == 0))
   {
     # if there are no addresses for which SpamAssassin must be run,
     # we let the message through unaltered.
@@ -1310,47 +1521,100 @@ sub process_file
     
     # first, submit a message for all remote addresses
     
-    if ($#remote_addresses >= 0) 
+    if ($#remote_recipients >= 0) 
     {
-      debug(7, "Submitting message for ".scalar(@remote_addresses).
+      debug(7, "Submitting message for ".scalar(@remote_recipients).
                " addresses without SpamAssassin run");
-      submitMessage(\@msglines, $return_path, @remote_addresses);
+      submitMessage(\$cli, \@msglines, $return_path, "", 
+                    @remote_recipients);
     }
     
     # then, submit a message for all local addresses using default
-    # SpamAssassin prefs
+    # SpamAssassin prefs for the various domains
     
     my $rewritten_msg;
     
-    if (scalar(@local_addresses_default) >= 0)
+    foreach my $domain_name (keys %default_recipients)
     {
-      my $plural = "";
-      if (scalar(@local_addresses_default) > 1)
+      # we've got a domain, let's get its settings and 
+      # the list of recipients in it
+      my $domain_conf = $domain_conf_hash{$domain_name};
+      my %domain_recipients = %{$default_recipients{$domain_name}};
+     
+      if (scalar(keys %domain_recipients) > 0)
       {
-        $plural = "es";
-      }
+        my $plural = "";
+        if (scalar(keys %domain_recipients) > 1)
+        {
+          $plural = "es";
+        }
       
-      debug(7, "Running SpamAssassin with default settings for ".
-               scalar(@local_addresses_default)." address".$plural);
-      $rewritten_msg = 
-        checkMessage(\@msglines, $root_conf{default_home_dir}, "<default>");
-      submitMessage([($rewritten_msg)], $return_path, 
-                    @local_addresses_default);
+        if ($domain_name eq "")
+        {
+          debug(7, "Running SpamAssassin with system default settings for ".
+                   scalar(keys %domain_recipients)." address".$plural);
+        }
+        else
+        {
+          debug(7, "Running SpamAssassin with domain ".$domain_name.
+                   " default settings for ".scalar(keys %domain_recipients).
+                   " address".$plural);
+        }
+          
+        my $is_spam = 0;
+        $rewritten_msg = 
+          checkMessage(\@msglines, "<default>",
+                       $domain_conf->{default_home_dir}, "<default>", 
+                       \$is_spam);
+        
+        my @no_dma_list;
+        foreach my $recipient (keys %domain_recipients)
+        {
+          if (($domain_recipients{$recipient} eq "") || !$is_spam)
+          {
+            push(@no_dma_list, $recipient);
+          }
+          else 
+          { 
+            # it's spam, and we have the info to attempt DMA
+            submitMessage(\$cli, [($rewritten_msg)], $return_path, 
+                          $domain_recipients{$recipient}, $recipient);
+          }
+        }
+        
+        if ($#no_dma_list > 0)
+        {
+          submitMessage(\$cli, [($rewritten_msg)], $return_path, "",
+                        @no_dma_list);
+        }
+      }
     }
     
-    foreach my $local_address (@local_addresses_custom)
+    foreach my $local_address (keys %custom_recipient_accts)
     {
-      my $account_dir = shift(@account_dirs_custom);
+      my $account_name = $custom_recipient_accts{$local_address};
+      my $account_dir = $custom_recipient_dirs{$local_address};
+      my $is_spam = 0;
       debug(7, "Running SpamAssassin with settings from ".
                $account_dir."/.spamassassin/user_prefs ".
                "for local address ".$local_address);
-      $rewritten_msg = 
-        checkMessage(\@msglines, $account_dir, $local_address);
-      submitMessage([($rewritten_msg)], $return_path, $local_address);        
+      $rewritten_msg = checkMessage(\@msglines, $account_name, 
+                                    $account_dir, $local_address, 
+                                    \$is_spam);
+      
+      submitMessage(\$cli, [($rewritten_msg)], $return_path,
+                    $account_name, $local_address);        
     }
     
     # finally, tell the server
     printResult("DISCARD");
+  }
+  
+  # close the CLI
+  if ($cli)
+  {
+    $cli->Logout();
+    undef $cli;
   }
 }
 
@@ -1359,100 +1623,112 @@ sub process_file
 
 sub loadRootConfig
 {
-  our %root_conf, $root_config_pathname;
+  our $root_conf;
+  our $root_config_pathname;
   our @scan_domains;
   
   # set default values
   
-  $root_conf{cgp_username} = "username";
-  $root_conf{cgp_password} = "password";
-  $root_conf{cgp_hostname} = "localhost";
-  $root_conf{use_cgpsa} = 1;
+  $root_conf->{cgp_username} = "username";
+  $root_conf->{cgp_password} = "password";
+  $root_conf->{cgp_hostname} = "localhost";
+  $root_conf->{allow_cgpsa} = 1;
+  $root_conf->{use_cgpsa} = 1;
   
   # parallel_requests defaults to on if we're not on Windows
   if ($^O =~ /^(?:mswin|dos|os2)/oi)
   {
-    $root_conf{parallel_requests} = 0;
+    $root_conf->{parallel_requests} = 0;
   }
   else
   {
-    $root_conf{parallel_requests} = 1;
+    $root_conf->{parallel_requests} = 1;
   }
   
-  $root_conf{max_requests} = 0;
-  $root_conf{headers_only} = 0;
-  $root_conf{use_cli} = 1;
-  $root_conf{cgp_port} = 106;
-  $root_conf{loop_prevention_header} = "X-TFF-CGPSA-Filter";
-  $root_conf{scan_domains} = 0;
+  $root_conf->{max_requests} = 0;
+  $root_conf->{headers_only} = 0;
+  $root_conf->{use_cli} = 1;
+  $root_conf->{cgp_port} = 106;
+  $root_conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
+  $root_conf->{scan_domains} = 0;
   undef @scan_domains;
-  $root_conf{direct_mailbox_scan} = 0;
-  $root_conf{direct_mailbox_rewrite} = 0;
-  $root_conf{debug} = 1;
-  $root_conf{debug_level} = 9;
-  $root_conf{sa_debug} = 0;
-  $root_conf{default_home_dir} = 
+  $root_conf->{direct_mailbox_scan} = 0;
+  $root_conf->{direct_mailbox_rewrite} = 0;
+  $root_conf->{debug} = 1;
+  $root_conf->{debug_level} = 9;
+  $root_conf->{sa_debug} = 0;
+  $root_conf->{default_home_dir} = 
     $cgp_base.$root_config_directory."SpamAssassin";
-  $root_conf{helper_path} = "";
-  $root_conf{sa_prefix} = "";
-  $root_conf{sa_default_rules_dir} = "";
-  $root_conf{sa_local_rules_dir} = "";
-  $root_conf{use_user_prefs} = 0;
-  $root_conf{require_user_prefs} = 0;
-  $root_conf{use_user_state} = 0;
-  $root_conf{use_auto_whitelist} = 1;
-  $root_conf{do_network_tests} = 1;
-  $root_conf{stop_at_threshold} = 0;
-  $root_conf{use_c_locale} = 1;
-  $root_conf{redirect_stderr} = 1;
-  $root_conf{absolute_queue_filenames} = 0;
- #$root_conf{route_mail_extension} set at runtime initialization
+  $root_conf->{helper_path} = "";
+  $root_conf->{sa_prefix} = "";
+  $root_conf->{sa_default_rules_dir} = "";
+  $root_conf->{sa_local_rules_dir} = "";
+  $root_conf->{allow_user_prefs} = 1;
+  $root_conf->{use_user_prefs} = 0;
+  $root_conf->{require_user_prefs} = 0;
+  $root_conf->{use_domain_prefs} = 1;
+  $root_conf->{allow_user_state} = 1;
+  $root_conf->{use_user_state} = 0;
+  $root_conf->{use_domain_state} = 1;
+  $root_conf->{use_dma_spam_mailbox} = 0;
+  $root_conf->{spam_mailbox_name} = "SPAM";
+  $root_conf->{allow_auto_whitelist} = 1;
+  $root_conf->{use_auto_whitelist} = 1;
+  $root_conf->{do_network_tests} = 1;
+  $root_conf->{stop_at_threshold} = 0;
+  $root_conf->{use_c_locale} = 1;
+  $root_conf->{redirect_stderr} = 1;
+  $root_conf->{absolute_queue_filenames} = 0;
+ #$root_conf->{route_mail_extension} set at runtime initialization
 
   # load root configuration file
   
-  readConfigFile(\%root_conf, $root_config_pathname);
+  readConfigFile($root_conf, $root_config_pathname);
   
   # Set the home dir for helpers (this is important, so it defaults
   # to the system prefs dir).
   
-  if (!$root_conf{helper_state_dir})
+  if (!$root_conf->{helper_state_dir})
   {
-    $root_conf{helper_state_dir} = $root_conf{default_home_dir};
+    $root_conf->{helper_state_dir} = $root_conf->{default_home_dir};
   }
   
   # If we're in "headers-only" mode, change other settings
   # appropriately.
   
-  if ($root_conf{headers_only})
+  if ($root_conf->{headers_only})
   {
-    $root_conf{use_cli} = 0;
-    $root_conf{use_user_prefs} = 0;
-    $root_conf{require_user_prefs} = 0;
-    $root_conf{use_user_state} = 0;
+    $root_conf->{use_cli} = 0;
+    $root_conf->{use_user_prefs} = 0;
+    $root_conf->{require_user_prefs} = 0;
+    $root_conf->{use_user_state} = 0;
   }
 }
 
 
-# Get the domain configuration for the specified domain. This will
-# be identical to the root configuration if the specified domain is "",
-# if it doesn't exist, or if there are no domain preferences for the
-# specified domain. If domain preferences for the specified domain
-# have already been loaded, they are not loaded again.
+# Load the domain configuration for the specified domain into the
+# domain_conf_hash. This will be identical to the root configuration if the 
+# specified domain is "", if it doesn't exist, or if there is no domain
+# configuration for the specified domain. If the domain configuration for 
+# the specified domain has already been loaded, it is not loaded again. All 
+# settings not explicitly specified in the domain configuration file are 
+# taken from the root configuration file.
 
 sub loadDomainConfig
 {
   my $domain_name = shift;
-  my %conf;
+  my %conf = %root_conf_hash;
   our %domain_conf_hash;
-  our %root_conf;
+  our $root_conf;
   
   if ($domain_name eq "")
   {
-    $domain_conf_hash{""} = \%root_conf;
+    $domain_conf_hash{""} = $root_conf;
   }
   elsif (!(exists $domain_conf_hash{$domain_name}))
   {
     debug(9, "Attempting to load domain configuration for ".$domain_name);
+    
     readConfigFile
       (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
 
@@ -1467,10 +1743,73 @@ sub loadDomainConfig
       # we didn't load anything, so for this domain we use the root
       # preferences
       debug(9, "Using root configuration for ".$domain_name);
-      $domain_conf_hash{$domain_name} = \%root_conf;
+      $domain_conf_hash{$domain_name} = $root_conf;
     }
   }
 }
+
+# Load the user configuration for the specified user into the 
+# user_conf_hash, from the specified user settings directory. This will be 
+# identical to the domain configuration if there is no user configuration
+# for the specified user. All settings not explicitly specified in the user 
+# configuration file are taken from the domain configuration file. This
+# function assumes that the provided settings directory is valid, and
+# that it ends with a "/".
+
+sub loadUserConfig
+{
+  my ($user_name, $settings_directory) = @_;
+  my %conf = ();
+  my $domain_name;
+  my $domain_conf;
+  our %domain_conf_hash;
+  our %user_conf_hash;
+  our $root_conf;
+  
+  if ($user_name =~ /^\S@(\S)$/)
+  {
+    $domain_name = $1;
+  }
+  else
+  {
+    $domain_name = "";
+  }
+  
+  loadDomainConfig($domain_name);
+  $domain_conf = $domain_conf_hash{$domain_name};
+  
+  if (!(exists $user_conf_hash{$user_name}))
+  {
+    debug(9, "Attempting to load user configuration for ".$user_name);
+
+    # set default values
+    $conf{use_cgpsa} = $domain_conf->{use_cgpsa};
+    $conf{direct_mailbox_scan} = $domain_conf->{direct_mailbox_scan};
+    $conf{direct_mailbox_rewrite} = $domain_conf->{direct_mailbox_rewrite};
+    $conf{use_user_prefs} = $domain_conf->{use_user_prefs};
+    $conf{use_user_state} = $domain_conf->{use_user_state};
+    $conf{use_auto_whitelist} = $domain_conf->{use_auto_whitelist};
+    $conf{use_dma_spam_mailbox} = $domain_conf->{use_dma_spam_mailbox};
+    $conf{spam_mailbox_name} = $domain_conf->{spam_mailbox_name};
+    
+    readConfigFile(\%conf, $settings_directory.our $user_config_filename);
+
+    if (!$conf{no_configuration})
+    {
+      # we successfully loaded something, let's cache it
+      debug(9, "Loaded user configuration for ".$user_name);
+      $user_conf_hash{$user_name} = \%conf;
+    }
+    else
+    {
+      # we didn't load anything, so for this domain we use the root
+      # preferences
+      debug(9, "Using domain configuration for ".$user_name);
+      $user_conf_hash{$user_name} = $domain_conf;
+    }
+  }
+}
+
 
 # Read preferences from a preferences file into a preferences 
 # hash. This does no initialization on the preferences hash. 
@@ -1480,7 +1819,7 @@ sub readConfigFile
   my ($conf, $filename) = @_;
   our @scan_domains;
   
-  if (!$filename || !open(IN,"<$filename")) 
+  if (!$filename || !(-f $filename) || !open(IN,"<$filename")) 
   {
     # the file doesn't exist
     $conf->{no_configuration} = 1;
@@ -1509,6 +1848,10 @@ sub readConfigFile
     elsif ($line =~ /^cgp[-_]hostname[\s\=]+(\S+)$/)
     {
       $conf->{cgp_hostname} = $1;
+    }
+    elsif ($line =~ /^allow[-_]cgpsa[\s\=]+(\S+)$/)
+    {
+      $conf->{allow_cgpsa} = evaluateBoolean($1);
     }
     elsif ($line =~ /^use[-_]cgpsa[\s\=]+(\S+)$/)
     {
@@ -1580,6 +1923,10 @@ sub readConfigFile
     {
       $conf->{helper_state_dir} = $1;
     }
+    elsif ($line =~ /^allow[-_]user[-_]prefs[\s\=]+(\S+)$/) 
+    {
+      $conf->{allow_user_prefs} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^use[-_]user[-_]prefs[\s\=]+(\S+)$/) 
     {
       $conf->{use_user_prefs} = evaluateBoolean($1);
@@ -1588,13 +1935,37 @@ sub readConfigFile
     {
       $conf->{require_user_prefs} = evaluateBoolean($1);
     }
+    elsif ($line =~ /^use[-_]domain[-_]prefs[\s\=]+(\S+)$/) 
+    {
+      $conf->{use_domain_prefs} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^allow[-_]user[-_]state[\s\=]+(\S+)$/) 
+    {
+      $conf->{allow_user_state} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^use[-_]user[-_]state[\s\=]+(\S+)$/) 
     {
       $conf->{use_user_state} = evaluateBoolean($1);
     }
+    elsif ($line =~ /^use[-_]domain[-_]state[\s\=]+(\S+)$/) 
+    {
+      $conf->{use_domain_state} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^allow[-_]auto[-_]whitelist[\s\=]+(\S+)$/) 
+    {
+      $conf->{allow_auto_whitelist} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^use[-_]auto[-_]whitelist[\s\=]+(\S+)$/) 
     {
       $conf->{use_auto_whitelist} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^use[-_]dma[-_]spam[-_]mailbox[\s\=]+(\S+)$/)
+    {
+      $conf->{use_dma_spam_mailbox} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^spam[-_]mailbox[-_]name[\s\=]+(\S+)$/)
+    {
+      $conf->{spam_mailbox_name} = $1;
     }
     elsif ($line =~ /^do[-_]network[-_]tests[\s\=]+(\S+)$/) 
     {
@@ -1659,8 +2030,7 @@ sub evaluateBoolean
 
 sub lockStandardOutput
 {
-  our %root_conf;
-  if ($root_conf{parallel_requests})
+  if (our $root_conf->{parallel_requests})
   {
     sysopen(FH, $lock_pathname, O_WRONLY | O_CREAT);
     flock(FH, LOCK_EX);
@@ -1672,8 +2042,7 @@ sub lockStandardOutput
 
 sub unlockStandardOutput
 {
-  our %root_conf;
-  if ($root_conf{parallel_requests})
+  if (our $root_conf->{parallel_requests})
   {
     close(FH);
   }
@@ -1742,8 +2111,7 @@ sub printExtraInfo
 sub getTime
 {
   my $result = time;
-  our %root_conf;
-  if ($root_conf{have_time_hires})
+  if (our $root_conf->{have_time_hires})
   {
     $result = Time::HiRes::time();
   }
@@ -1760,10 +2128,9 @@ sub debug
 {
   my $debug_level = scalar(shift);
   my $debug_string = shift;
-  our $seqnum;
-  our %root_conf;
+  our $root_conf;
   
-  if ($root_conf{debug} && $debug_level <= $root_conf{debug_level}) 
+  if ($root_conf->{debug} && $debug_level <= $root_conf->{debug_level}) 
   {
     printExtraInfo($debug_string);
   }
@@ -1781,13 +2148,12 @@ sub error_exit
 {
   my $error_string = shift;
   my $cgp_error_string = to_cgp_string($error_string);
-  our %root_conf;
   
   select STDERR;
   print("* ".scalar localtime()." CGPSA Error: ".$cgp_error_string."\n");
   select STDOUT;
   
-  if ($root_conf{redirect_stderr})
+  if (our $root_conf->{redirect_stderr})
   {
     # stderr is redirected, so output to stdout as well
     lockStandardOutput();

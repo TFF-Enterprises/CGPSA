@@ -401,6 +401,19 @@ on a per-domain basis.</li>
 spam directly into users' spam mailboxes without the need for
 user-level rules; the spam mailbox names can be chosen on a server-wide, domain-wide, or individual user basis.</li>
 </dd>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - ? December 2003</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed documentation of "direct_mailbox_rewrite" to indicate that the
+rewrite happens before the decision to scan mail rather than after (and that
+therefore, if "direct_mailbox_rewrite" is on, "direct_mailbox_scan" is 
+superfluous).</li>
+<li>Fixed direct mailbox address processing. Previously, the "direct_mailbox_rewrite" option would have caused mail to bounce, because instead of rewriting the address "mailbox#account@domain" as "account+mailbox@domain", it would rewrite it as "mailbox+account@domain".</li> 
+<li>Fixed a problem where a log entry did not get properly pluralized when
+necessary.</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_6.tgz">1.2.6</a> - 26 December 2003</dt>
 <dd>
 <p>Bug Fixes</p>
