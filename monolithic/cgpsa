@@ -996,7 +996,7 @@ sub process_file
                    $data->[0].",".$data->[1].",".$data->[2]);
           
           my $module = $data->[0];
-          my $username = $data->[1];
+          my $host = $data->[1];
           $data = undef;
           
           if ($cli->isSuccess) 
@@ -1021,7 +1021,7 @@ sub process_file
                 debug(8, "Rewrote DMA as account detail: $local_address");
               }
               
-              if ($username =~ /\*@(\S*)/)
+              if ($host =~ /\*@(\S*)/)
               {
                 # this is an "all@" message, so we need to process it with
                 # ADDHEADER for security reasons (since PIPE is a trusted
@@ -1043,30 +1043,30 @@ sub process_file
               {
                 # we have to attempt a scan
                 my $account_dir = 
-                  getEffectiveHomeDirectory(\$cli, $username);
+                  getEffectiveHomeDirectory(\$cli, $host);
                 debug(9, "Local address ".$local_address.", account name ".
-                         $username.", effective home directory ".
+                         $host.", effective home directory ".
                          $account_dir);
                 
                 if ($account_dir eq $conf->{default_home_dir})
                 {
                   # use systemwide SpamAssassin prefs
                   debug(8, "Using default SpamAssassin settings for ".
-                           $username); 
+                           $host); 
                   push(@local_addresses_default, $local_address);
                 }
                 elsif ($account_dir)
                 {
                   # use user's SpamAssassin prefs
                   debug(8, "Using custom SpamAssassin settings for ".
-                           $username);
+                           $host);
                   push(@local_addresses_custom, $local_address);
                   push(@account_dirs_custom, $account_dir);
                 }
                 else
                 {
                   # no SpamAssassin prefs => treat as remote
-                  debug(8, "No SpamAssassin settings found for ".$username);
+                  debug(8, "No SpamAssassin settings found for ".$host);
                   push(@remote_addresses, $local_address);
                 }
               }
@@ -1080,7 +1080,7 @@ sub process_file
 
               foreach my $domain (@scan_domains)
               {
-                if ($username eq $domain)
+                if ($host eq $domain)
                 {
                   debug(8, "Using default SpamAssassin settings for ".
                            "remote address ".$raw_recipient.
