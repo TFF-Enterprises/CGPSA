@@ -34,7 +34,7 @@ configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
-<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.4, released 1 April 2003.</p>
+<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.4, released 2 April 2003.</p>
 <p>There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
@@ -287,11 +287,14 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt>1.0.4 - 1 April 2003</dt>
+<dt>1.0.4 - 2 April 2003</dt>
 <dd>
 <ul>
+<li>Added the "use_c_locale" configuration option, to force the C locale to be used by Perl when running SpamAssassin (which has some known problems with certain locales). The default is to use the C locale.
+<li>Added more logic to the headers-only mode, so that we now produce the same headers as SpamAssassin would if it were rewriting the message itself.</li>
+<li>Changed the text of the loop prevention header to read either "Scanned" or "Scan Failed", as appropriate (rather than "Attempted").</li>
 <li>Fixed a problem that occurred with SpamAssassin's "report_safe" option turned on, where an email identified as spam would be processed in an infinite loop.</li>
-<li>Added the "direct_mailbox_rewrite" and "direct_mailbox_scan" configuration options, and removed the "direct_mailbox_passthrough" configuration option. This allow for more flexibility when determining the scanning policy for direct mailbox addresses.</li>
+<li>Added the "direct_mailbox_rewrite" and "direct_mailbox_scan" configuration options, and removed the "direct_mailbox_passthrough" configuration option. This allow for more flexibility when determining the scanning policy for direct mailbox addresses. The default settings are to not rewrite direct mailbox addresses, and to not scan mail for direct mailbox addresses.</li>
 </ul>
 </dd>
 <dt>1.0.3 - 30 March 2003</dt>
@@ -356,7 +359,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-1 April 2003<br />
+2 April 2003<br />
 </address>
 </body>
 </html>
