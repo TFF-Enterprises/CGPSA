@@ -1150,7 +1150,6 @@ sub checkMessage
     }
   }
   
-  prin
   # And now pass the preferences to SpamAssassin
   
   if ($root_conf->{spamassassin_api_version} == 3)
