@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3.5</h1>
-<h2>Copyright &copy; 2002-2004 TFF Enterprises<br/>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.4</h1>
+<h2>Copyright &copy; 2002-2005 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
 
@@ -38,11 +38,10 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_5.tgz">1.3.5</a>, 
-released 2 December 2004.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a>, 
+released 2 January 2005.</p>
 
-<p>The current testing version of CGPSA is 1.4f5, released 28 December 
-2004. It is available from the <a href="http://www.tffenterprises.com/cgpsa/beta/">beta documentation page</a>.</p>
+<p>There is no current testing version of CGPSA.</p>
 
 <h2>Documentation</h2>
 
@@ -120,7 +119,7 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
-<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.6.x (not compatible with SpamAssassin 3.x)</li>
+<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.6 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
 below and in SpamAssassin's documentation).</li>
@@ -394,6 +393,39 @@ file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a> - 2 January 2005</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>Added compatibility with SpamAssassin 3.x releases.</li>
+
+<li>Added support for CommuniGate Pro 4.2's domain foldering feature.<br/><br/></li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+
+<li>Removed support for loading domain configuration files named "cgpsa.conf"; all domain configuration files must now be named "cgpsa.domainconf".</li>
+
+<li>Updated the version of CLI.pm included in the CGPSA distribution.</li>
+
+<li>Log level assignment has been changed throughout CGPSA to make the
+range of log levels more useful. A log level of 4 is sufficient for
+"spam"/"non-spam" reports to make it into the CommuniGate Pro log; a log
+level of 7 is sufficient to provide all but the most detailed debugging
+log information. The default log level, which used to be 9, has been
+changed to 8.<br/><br/></li>
+
+</ul>
+<p>Known Issues</p>
+<ul>
+
+<li>Same as for Version 1.3.<br/><br/></li>
+
+</ul>
+</dd>
 
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_5.tgz">1.3.5</a> - 2 December 2004</dt>
 <dd>
@@ -979,7 +1011,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-28 December 2004<br />
+2 January 2005<br />
 </address>
 </body>
 </html>

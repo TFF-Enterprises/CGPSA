@@ -1,7 +1,7 @@
 ####################################################################
 #  Perl interface to CommuniGate Pro CLI.
 #
-#  Version 2.6.4
+#  Version 2.6.5
 #
 #  Original location: <http://www.stalker.com/CGPerl>
 #  Revision history: <http://www.stalker.com/CGPerl/History.html>
@@ -56,7 +56,7 @@
 
 ############################## Forwarder Commands
 # ListForwarders
-# CreateFrowarder
+# CreateForwarder
 # DeleteForwarder
 # GetForwarder
 
@@ -79,6 +79,7 @@
 # [Get|Update|Set]DomainDefaults
 # [Get|Update|Set]ClusterDomainDefaults
 # [Get|Update|Set]AllAccountsDefaults
+# GetDomainLocation
 # GetAccountLocation
 # [Get|Update|Set]AccountDefaults
 # [Get|Update|Set]ClusterAccountDefaults
@@ -122,6 +123,7 @@
 # ListSubscribers
 # GetSubscriberInfo
 # SetPostingMode
+# ProcessBounce
 
 ############################## Web Skins Administration 
 # ListDomainSkins( [domainName] )
@@ -164,12 +166,14 @@
 ############################## Server commands
 # [Get|Update|Set]Module
 
+# [Get|Set]LANIPs
 # [Get|Set]BlacklistedIPs
 # [Get|Set]ClientIPs 
 # [Get|Set]WhiteHoleIPs 
 # [Get|Set]Protection 
 # [Get|Set]Banned
 
+# [Get|Set]ClusterLANIPs
 # [Get|Set]ClusterBlacklistedIPs
 # [Get|Set]ClusterClientIPs 
 # [Get|Set]ClusterWhiteHoleIPs 
@@ -181,8 +185,7 @@
 # [Get|Set]RouterTable
 # [Get|Set]RouterSettings
 # [Get|Set]ClusterRouterTable
-# [Get|Set]ntercept
-# [Get|Set]ClusterIntercept
+# [Get|Set][Server|Cluster]Intercept
 
 # Route
 
@@ -1010,6 +1013,12 @@ sub SetClusterWebUserDefaults {
   $this->_parseResponse();
 }
 
+sub GetDomainLocation {
+  my ( $this, $account ) = @_;
+  $this->send('GetDomainLocation '.$account);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
 
 sub GetAccountLocation {
   my ( $this, $account ) = @_;
@@ -1462,21 +1471,30 @@ sub RemoveClusterAlert {
 #   Personal Web Site Administration
 
 sub GetWebFile {
-  my ($this,$accountName,$fileName) = @_;
+  my ($this,$accountName,$fileName,$position,$sliceSize) = @_;
 
-  croak 'usage CGP::CLI->GetWebFile(accountName,fileName)'
+  croak 'usage CGP::CLI->GetWebFile(accountName,fileName[,position,sliceSize])'
        unless (defined $accountName && defined $fileName);
-  $this->send('GetWebFile '.$accountName.' FILE '.$this->printWords($fileName));
+  my $line='GetWebFile '.$accountName.' FILE '.$this->printWords($fileName);
+  $line .= ' OFFSET '. $position if(defined $position && $position!=0);
+  $line .= ' SIZE '. $sliceSize if(defined $sliceSize);
+      
+  $this->send($line);
   return undef unless $this->_parseResponse;
   $this->parseWords($this->getWords);
 }
 
 sub PutWebFile {
-  my ($this,$accountName,$fileName,$data) = @_;
+  my ($this,$accountName,$fileName,$data,$position) = @_;
 
-  croak 'usage CGP::CLI->PutWebFile(accountName,fileName,data)'
+  croak 'usage CGP::CLI->PutWebFile(accountName,fileName,data [,position])'
        unless (defined $accountName && defined $fileName && defined $data);
-  $this->send('PutWebFile '.$accountName.' FILE '.$this->printWords($fileName).' DATA "'.$data.'"');
+  my $line='PutWebFile '.$accountName.' FILE '.$this->printWords($fileName);
+  $line .= ' OFFSET '. $position if(defined $position && $position!=0);
+  
+  $line .= ' DATA "'.$data.'"';
+       
+  $this->send($line);
   $this->_parseResponse;
 }
 
@@ -1635,6 +1653,15 @@ sub SetPostingMode {
   $this->_parseResponse();
 }
 
+sub ProcessBounce {
+  my ($this, $listName, $address, $fatal) = @_;
+  croak 'usage CGP::CLI->ProcessBounce($listName,$subscriberAddress,"fatal")'
+      unless defined $listName && defined $address;
+  my $line = 'ProcessBounce '.$listName;
+  $line .= ' FATAL' if($fatal);
+  $this->send($line. ' FOR '.$address);
+  $this->_parseResponse();
+}
 
 #############################################
 #   Web Skins Administration 
@@ -1922,11 +1949,12 @@ sub ClearWebUserCache {
 #   Web Interface Integration
 
 sub CreateWebUserSession {
-  my ($this, $accountName, $ipAddress) = @_;
-  croak 'usage CGP::CLI->CreateWebUserSession($accountName, $IP_Address)'
+  my ($this, $accountName, $ipAddress, $wml) = @_;
+  croak 'usage CGP::CLI->CreateWebUserSession($accountName, $IP_Address,"WML")'
     unless defined $accountName && defined $ipAddress;
-
-  $this->send('CreateWebUserSession '.$accountName.' ADDRESS '.$ipAddress);
+  my $line='CreateWebUserSession '.$accountName.' ADDRESS '.$ipAddress;
+  $line .= ' WML' if($wml);
+  $this->send($line);
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
 }
@@ -1980,6 +2008,13 @@ sub SetModule {
   $this->_parseResponse();
 }
 
+sub GetLANIPs {
+  my ( $this ) = @_;
+  $this->send('GetLANIPs');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
 sub GetBlacklistedIPs {
   my ( $this ) = @_;
   $this->send('GetBlacklistedIPs');
@@ -2014,6 +2049,15 @@ sub GetBanned {
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
 }
+
+sub SetLANIPs {
+  my ( $this, $addresses ) = @_;
+  croak 'usage CGP::CLI->SetLANIPs("10.0.0.1\e192.168.0.1")'
+    unless defined $addresses;
+  $this->send ('SetLANIPs '.$this->printWords($addresses));
+  $this->_parseResponse();
+}
+
 
 sub SetBlacklistedIPs {
   my ( $this, $addresses ) = @_;
@@ -2055,6 +2099,13 @@ sub SetBanned {
   $this->_parseResponse();
 }
 
+sub GetClusterLANIPs {
+  my ( $this ) = @_;
+  $this->send('GetClusterLANIPs');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
 sub GetClusterBlacklistedIPs {
   my ( $this ) = @_;
   $this->send('GetClusterBlacklistedIPs');
@@ -2087,6 +2138,14 @@ sub GetClusterBanned {
   $this->send('GetClusterBanned');
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
+}
+
+sub SetClusterLANIPs {
+  my ( $this, $addresses ) = @_;
+  croak 'usage CGP::CLI->SetClusterLANIPs("10.0.0.1\e192.168.0.1")'
+    unless defined $addresses;
+  $this->send ('SetClusterLANIPs '.$this->printWords($addresses));
+  $this->_parseResponse();
 }
 
 sub SetClusterBlacklistedIPs {
@@ -2319,7 +2378,7 @@ sub ReleaseSMTPQueue {
   my ($this, $queue) = @_;
   croak 'usage CGP::CLI->ReleaseSMTPQueue($queueName)'
     unless defined $queue;
-  $this->send('ReleaseSMTPQueue '.$queue);
+  $this->send('ReleaseSMTPQueue '.$this->printWords($queue));
   $this->_parseResponse();
 }
 sub RejectQueueMessage {
@@ -2481,54 +2540,53 @@ sub send {
   ${*$this}{currentCGateCommand} = $command;
   print STDERR ref($this) . "->send($command)\n\n"
     if ${*$this}{'debug'};
-
+  ${*$this}{'lastAccess'}=time();
   print $this $command.$CGP::CLI_CRLF;
 }
 
 
-my $len;
-my $span;
-my $data;
-my $translate;
+###########################
 
 sub skipSpaces {
-  while($span < $len && substr($data,$span,1) =~ /\s/) { ++$span; }
+  my $this = shift;
+  while(${*$this}{'span'} < ${*$this}{'len'} && substr(${*$this}{'data'},${*$this}{'span'},1) =~ /\s/) { ++${*$this}{'span'}; }
 }
 
 sub readWord {
+  my $this = shift;
   my $isQuoted=0;
   my $isBlock=0;
   my $result="";
 
-  skipSpaces();
-  if(substr($data,$span,1) eq '"') {
-    $isQuoted=1; ++$span;
-  } elsif(substr($data,$span,1) eq '[') {
+  $this->skipSpaces();
+  if(substr(${*$this}{'data'},${*$this}{'span'},1) eq '"') {
+    $isQuoted=1; ++${*$this}{'span'};
+  } elsif(substr(${*$this}{'data'},${*$this}{'span'},1) eq '[') {
     $isBlock=1;
   }
-  while($span < $len) {
-    my $ch=substr($data,$span,1);
+  while(${*$this}{'span'} < ${*$this}{'len'}) {
+    my $ch=substr(${*$this}{'data'},${*$this}{'span'},1);
 
     if($isQuoted) {
       if($ch eq '\\') {
-        if(substr($data,$span+1,3) =~ /^(?:\"|\\|\d\d\d)/) { 
-          $ch=substr($data,++$span,3);
+        if(substr(${*$this}{'data'},${*$this}{'span'}+1,3) =~ /^(?:\"|\\|\d\d\d)/) { 
+          $ch=substr(${*$this}{'data'},++${*$this}{'span'},3);
           if($ch =~ /\d\d\d/) {
-            $span+=2;
+            ${*$this}{'span'}+=2;
             $ch=chr($ch);
           } else {
             $ch=substr($ch,0,1);
-            $ch='\\'.$ch unless($translate); 
+            $ch='\\'.$ch unless(${*$this}{'translateStrings'}); 
           }
         }
       } elsif($ch eq '"') {
-        ++$span;
+        ++${*$this}{'span'};
         last;
       }
     } elsif($isBlock) {
       if($ch eq ']') {
         $result .= $ch;
-        ++$span;
+        ++${*$this}{'span'};
         last;
       }
     } elsif($ch =~ /[-a-zA-Z0-9\x80-\xff_\.\@\!\#\%]/) {    
@@ -2536,47 +2594,50 @@ sub readWord {
       last;
     }
     $result .= $ch;
-    ++$span;
+    ++${*$this}{'span'};
   }
   return $result;
 }
 
 
 sub readKey() {
-  return readWord();
+  my $this = shift;
+  return $this->readWord();
 }
 
 
 sub readValue() {
-  skipSpaces();
-  my $ch=substr($data,$span,1);
+  my $this = shift;
+  $this->skipSpaces();
+  my $ch=substr(${*$this}{'data'},${*$this}{'span'},1);
   if($ch eq '{') {
-    ++$span;
-    return readDictionary();
+    ++${*$this}{'span'};
+    return $this->readDictionary();
   } elsif($ch eq '(') {
-    ++$span;
-    return readArray();
+    ++${*$this}{'span'};
+    return $this->readArray();
   } else {
-    return readWord();
+    return $this->readWord();
   }
 }
 
 sub readArray() {
+  my $this = shift;
   my $result=[];
-  while($span<$len) {
-    skipSpaces();
-    if(substr($data,$span,1) eq ')') {
-      ++$span;
+  while(${*$this}{'span'}<${*$this}{'len'}) {
+    $this->skipSpaces();
+    if(substr(${*$this}{'data'},${*$this}{'span'},1) eq ')') {
+      ++${*$this}{'span'};
       last;
     } else {
-      my $theValue=readValue();
-      skipSpaces();
+      my $theValue=$this->readValue();
+      $this->skipSpaces();
       push(@$result,$theValue);
-      if(substr($data,$span,1) eq ',') {
-        ++$span;
-      } elsif(substr($data,$span,1) eq ')') {
+      if(substr(${*$this}{'data'},${*$this}{'span'},1) eq ',') {
+        ++${*$this}{'span'};
+      } elsif(substr(${*$this}{'data'},${*$this}{'span'},1) eq ')') {
       } else { 
-        croak "CGPro output format error:",substr($data,$span,10);
+        croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10);
       }     
     }
   }
@@ -2584,21 +2645,22 @@ sub readArray() {
 }
 
 sub readDictionary {
+  my $this = shift;
   my $result={};
-  while($span < $len) {
-    skipSpaces();
-    if(substr($data,$span,1) eq '}') {
-      ++$span;
+  while(${*$this}{'span'} < ${*$this}{'len'}) {
+    $this->skipSpaces();
+    if(substr(${*$this}{'data'},${*$this}{'span'},1) eq '}') {
+      ++${*$this}{'span'};
       last;
     } else {
-      my $theKey=readKey();
-      skipSpaces();
-      if(substr($data,$span,1) ne '=') { croak "CGPro output format error:",substr($data,$span,10); }
-      ++$span;
-      @$result{$theKey}=readValue();
-      skipSpaces();
-      if(substr($data,$span,1) ne ';') { croak "CGPro output format error:",substr($data,$span,10); }
-      ++$span;
+      my $theKey=$this->readKey();
+      $this->skipSpaces();
+      if(substr(${*$this}{'data'},${*$this}{'span'},1) ne '=') { croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10); }
+      ++${*$this}{'span'};
+      @$result{$theKey}=$this->readValue();
+      $this->skipSpaces();
+      if(substr(${*$this}{'data'},${*$this}{'span'},1) ne ';') { croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10); }
+      ++${*$this}{'span'};
     }
   }
   return $result;
@@ -2606,11 +2668,11 @@ sub readDictionary {
 
 sub parseWords {
   my $this = shift;
-  $data = shift;
-  $span=0;
-  $len=length($data);
-  $translate = ${*$this}{'translateStrings'};
-  return readValue();
+
+  ${*$this}{'data'}=shift;
+  ${*$this}{'span'}=0;
+  ${*$this}{'len'}=length(${*$this}{'data'});
+  return $this->readValue();
 }
 
 1;
