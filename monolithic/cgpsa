@@ -369,7 +369,7 @@ sub checkCLI
 sub submitMessage 
 {
   my ($msg_ptr, $return_path, @addresses) = @_;
-  my $filename = getUniqueFilename(@addresses);
+  my $filename = our $cgp_base."Submitted/".getUniqueFilename(@addresses);
   
   open(OUTFILE, ">$filename");
   print OUTFILE "Return-Path: <".$return_path.">\n";
@@ -1149,15 +1149,16 @@ sub unlockStandardOutput
 }
 
 
-# Generate a unique filename
+# Generate a unique filename (just a filename, not a full path to anywhere).
 
 sub getUniqueFilename 
 {
   my $uniquestring = shift;
+  our $seqnum;
   my $basetime=time;
-  my $rand=rand(10000);
-  my $uniquename=$basetime.$rand.$uniquestring;
-  return our $cgp_base."Submitted/".$uniquename;
+  my $rand=int(rand(10000));
+  my $uniquename=$seqnum.".".$basetime.$rand.$uniquestring;
+  return $uniquename;
 }
 
 
