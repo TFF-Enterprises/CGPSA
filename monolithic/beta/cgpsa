@@ -1757,7 +1757,7 @@ sub loadDomainConfig
     foreach my $setting (keys %root_conf_hash)
     {
       $conf{$setting} = $root_conf_hash{$setting};
-      print("* $setting = ".$domain_conf->{$setting}."\n");
+      print("* $setting = ".$root_conf_hash{$setting}."\n");
     }
     
     readConfigFile
