@@ -1,7 +1,7 @@
 ####################################################################
 #  Perl interface to CommuniGate Pro CLI.
 #
-#  Version 2.6.0
+#  Version 2.6.1
 #
 #  Original location: <http://www.stalker.com/CGPerl>
 #  Revision history: <http://www.stalker.com/CGPerl/History.html>
@@ -44,6 +44,7 @@
 # GetAccountInfo
 # GetWebUser
 # SetWebUser
+# GetEffectiveWebUser
 
 ############################## Group Commands
 # ListGroups
@@ -62,59 +63,40 @@
 ############################## Domain commands
 # ListDomains
 # MainDomainName
-# GetDomainSettings
+# [Get|Update|Set]DomainSettings
 # GetDomainEffectiveSettings
-# UpdateDomainSettings
-# SetDomainSettings 
-# CreateDomain
-# RenameDomain
-# DeleteDomain
+# [Create|Rename|Delete]Domain
 # CreateSharedDomain
 # CreateDirectoryDomain
-# GetDomainAliases
-# SetDomainAliases
+# [Get|Set]DomainRules
+# [Get|Set]DomainAliases
 # ListAdminDomains
-# GetDirectoryIntegration
-# SetDirectoryIntegration
-# GetClusterDirectoryIntegration
-# SetClusterDirectoryIntegration
+# [Insert|Delete]DirectoryRecords
+# [Get|Set]DirectoryIntegration
+# [Get|Set]ClusterDirectoryIntegration
 
-# GetDomainDefaults
-# UpdateDomainDefauls
-# SetDomainDefauls
 
-# GetClusterDomainDefaults
-# UpdateClusterDomainDefauls
-# SetClusterDomainDefauls
-
-# GetAllAccountsDefaults
-# UpdateAllAccountsDefaults
+# [Get|Update|Set]DomainDefaults
+# [Get|Update|Set]ClusterDomainDefaults
+# [Get|Update|Set]AllAccountsDefaults
 # GetAccountLocation
-# GetAccountDefaults
-# UpdateAccountDefaults
-# SetAccountDefaults
-# GetWebUserDefaults
-# SetWebUserDefaults
-# GetAccountTemplate
-# UpdateAccountTemplate
-# SetAccountTemplate
+# [Get|Update|Set]AccountDefaults
+# [Get|Update|Set]ClusterAccountDefaults
+# [Get|Set]WebUserDefaults
+# [Get|Set]ServerWebUserDefaults
+# [Get|Set]ClusterWebUserDefaults
+# [Get|Update|Set]AccountTemplate
 
 ############################## Mailbox Administration
 # ListMailboxes
-# CreateMailbox
-# RenameMailbox
-# RenameMailboxes
-# DeleteMailbox
-# DeleteMailboxes
+# [Create|Rename|Delete]Mailbox
+# [Rename|Delete]Mailboxes
 # GetMailboxInfo
-# GetMailboxACL
-# SetMailboxACL
+# [Get|Set]MailboxACL
 # GetMailboxRights
 
-# GetAccountSubscription
-# SetAccountSubscription
-# GetMailboxAliases
-# SetMailboxAliases
+# [Get|Set]AccountSubscription
+# [Get|Set]MailboxAliases
 
 ############################## Alerts Administration
 # Get[Domain|Account|Server|Cluster]Alerts
@@ -134,11 +116,7 @@
 # ListLists
 # GetDomainLists
 # GetAccountLists
-# CreateList
-# RenameList
-# DeleteList
-# GetList 
-# UpdateList
+# [Create|Rename|Delete|Get|Update]List
 # List
 # ListSubscribers
 # GetSubscriberInfo
@@ -180,48 +158,28 @@
 # ClearWebUserCache
 
 ############################## Web Interface Integration
-# CreateWebUserSession
-# GetWebUserSession
-# KillWebUserSession
+# [Create|Get|Kill]WebUserSession
 
 ############################## Server commands
-# GetModule
-# UpdateModule
-# SetModule
+# [Get|Update|Set]Module
 
-# GetBlacklistedIPs
-# GetClientIPs 
-# GetWhiteHoleIPs 
-# GetProtection 
-# GetBanned
+# [Get|Set]BlacklistedIPs
+# [Get|Set]ClientIPs 
+# [Get|Set]WhiteHoleIPs 
+# [Get|Set]Protection 
+# [Get|Set]Banned
 
-# SetBlacklistedIPs
-# SetClientIPs
-# SetWhiteHoleIPs 
-# SetProtection 
-# SetBanned
-
-# GetClusterBlacklistedIPs
-# GetClusterClientIPs 
-# GetClusterWhiteHoleIPs 
-# GetClusterProtection 
+# [Get|Set]ClusterBlacklistedIPs
+# [Get|Set]ClusterClientIPs 
+# [Get|Set]ClusterWhiteHoleIPs 
+# [Get|Set]ClusterProtection 
 # GetClusterBanned
 
-# SetClusterBlacklistedIPs
-# SetClusterClientIPs
-# SetClusterWhiteHoleIPs 
-# SetClusterProtection 
-
-
-# GetServerRules
-# SetServerRules
-# GetClusterRules
-# SetClusterRules
+# [Get|Set][Server|Cluster]Rules
 # RefreshOSData
-# GetRouterTable
-# SetRouterTable
-# GetClusterRouterTable
-# SetClusterRouterTable
+# [Get|Set]RouterTable
+# [Get|Set]RouterSettings
+# [Get|Set]ClusterRouterTable
 # Route
 
 ############################## Monitoring commands
@@ -229,14 +187,13 @@
 # Shutdown
 
 ############################## Statistics commands
-# GetAccountStat
-# ResetAccountStat
-# GetDomainStat
-# ResetDomainStat
+# [Get|Reset]AccountStat
+# [Get|Reset]DomainStat
 
 ############################## Miscellaneous commands
 # WriteLog
 # ReleaseSMTPQueue
+# GetCurrentController
 
 ##############################################################
 
@@ -580,7 +537,7 @@ sub GetAccountInfo {
 
 sub GetWebUser {
   my ($this, $account) = @_;
-  croak 'usage CGP::CLI->GetAccountRights($account)'
+  croak 'usage CGP::CLI->GetWebUser($account)'
     unless defined $account;
   $this->send('GTWUSR '.$account);
   return undef unless $this->_parseResponse();
@@ -597,6 +554,14 @@ sub SetWebUser {
   $this->_parseResponse();
 }
 
+sub GetEffectiveWebUser {
+  my ($this, $account) = @_;
+  croak 'usage CGP::CLI->GetEffectiveWebUser($account)'
+    unless defined $account;
+  $this->send('GetEffectiveWebUser '.$account);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
 
 #################################################################
 #  Group managent commands
@@ -821,6 +786,22 @@ sub ReloadDirectoryDomains {
   $this->_parseResponse();
 }
 
+sub GetDomainRules {
+  my ($this, $domainName) = @_;
+  croak 'usage CGP::CLI->GetDomainRules($domainName)'
+    unless defined $domainName;
+  $this->send('GetDomainRules '.$domainName);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub SetDomainRules {
+  my ($this, $domainName, $rules) = @_;
+  croak 'usage CGP::CLI->SetDomainRules($domainName, \@rules)'
+    unless defined $domainName && defined $rules;
+  $this->send('SetDomainRules '.$domainName.' '.$this->printWords($rules));
+  $this->_parseResponse();
+}
 
 sub GetDomainAliases {
   my ($this, $domain) = @_;
@@ -849,6 +830,22 @@ sub ListAdminDomains {
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
 }
+
+sub InsertDirectoryRecords {
+  my ($this, $domain) = @_;
+  my $line = 'InsertDirectoryRecords';
+  $line .= ' '.$domain if $domain;
+  $this->send($line);
+  $this->_parseResponse();
+}
+sub DeleteDirectoryRecords {
+  my ($this, $domain) = @_;
+  my $line = 'DeleteDirectoryRecords';
+  $line .= ' '.$domain if $domain;
+  $this->send($line);
+  $this->_parseResponse();
+}
+
 
 sub GetDirectoryIntegration {
   my $this = shift;
@@ -962,6 +959,30 @@ sub UpdateClusterAccountDefaults {
 sub SetClusterAccountDefaults {
   my ( $this, $dict ) = @_;
   $this->send('SetClusterAccountDefaults '.$this->printWords($dict));
+  $this->_parseResponse();
+}
+
+sub GetServerWebUserDefaults {
+  my $this = shift;
+  $this->send('GetServerWebUserDefaults');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+sub SetServerWebUserDefaults {
+  my ( $this, $dict ) = @_;
+  $this->send('SetServerWebUserDefaults '.$this->printWords($dict));
+  $this->_parseResponse();
+}
+
+sub GetClusterWebUserDefaults {
+  my $this = shift;
+  $this->send('GetClusterWebUserDefaults');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+sub SetClusterWebUserDefaults {
+  my ( $this, $dict ) = @_;
+  $this->send('SetClusterWebUserDefaults '.$this->printWords($dict));
   $this->_parseResponse();
 }
 
@@ -2106,6 +2127,22 @@ sub SetRouterTable {
   $this->_parseResponse();
 }
 
+sub GetRouterSettings {
+  my $this = shift;
+  $this->send('GetRouterSettings');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub SetRouterSettings {
+  my ($this, $settings) = @_;
+  croak 'usage CGP::CLI->SetRouterSettings(\@settings)'
+    unless defined $settings;
+  $this->send('SetRouterSettings '.$this->printWords($settings));
+  $this->_parseResponse();
+}
+
+
 sub GetClusterRouterTable {
   my $this = shift;
   $this->send('GetClusterRouterTable');
@@ -2122,10 +2159,12 @@ sub SetClusterRouterTable {
 }
 
 sub Route {
-  my ($this, $address) = @_;
-  croak 'usage CGP::CLI->Route(address)'
+  my ($this, $address, $mail) = @_;
+  croak 'usage CGP::CLI->Route(address[,"mail"])'
     unless defined $address;
-  $this->send('Route '.$address);
+  my $line='Route '.$address;
+  $line .= ' mail' if($mail);
+  $this->send($line);
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
 }
@@ -2206,6 +2245,13 @@ sub ReleaseSMTPQueue {
     unless defined $queue;
   $this->send('ReleaseSMTPQueue '.$queue);
 }
+sub GetCurrentController {
+  my ($this) = @_;
+  $this->send('GetCurrentController');
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
 
 #########################################################################
 #########################################################################
