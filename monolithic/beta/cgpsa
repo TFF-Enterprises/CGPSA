@@ -1290,7 +1290,7 @@ sub checkMessage
       $rewritten_mail = $mail;
       $rewritten_mail->delete_header($root_conf->{loop_prevention_header});
       $rewritten_mail->header
-        ($root_conf->{loop_prevention_header}, "Scan Failed");
+        ($root_conf->{loop_prevention_header}, "Scan Failed\n");
     }
     
     ${$is_spam_ptr} = 0;
@@ -1322,7 +1322,7 @@ sub checkMessage
   else # SA3
   {
     $rewritten_mail->delete_header($VERSIONHEADERNAME);
-    $rewritten_mail->header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
+    $rewritten_mail->header($VERSIONHEADERNAME, $VERSIONHEADERTEXT."\n");
     $rewritten_mail_scalar = 
         $rewritten_mail->get_all_headers(1) . "\n" . 
         $rewritten_mail->get_pristine_body();
