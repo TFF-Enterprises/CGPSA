@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.6
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.7
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -80,7 +80,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.6";
+our $VERSION = "1.0.7";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -410,6 +410,12 @@ sub getEffectiveHomeDirectory
   {
     # $account_dir is already set to the effective home directory
   }
+  elsif ($conf->{use_user_prefs} && $account_dir &&
+         (-e "$account_dir/account.web/.spamassassin/user_prefs"))
+  {
+    # prefs are in 1.1 location
+    $account_dir = "$account_dir/account.web";
+  }
   elsif (!$conf->{require_user_prefs})
   {
     # the default home directory is the effective home directory
@@ -649,7 +655,11 @@ sub process_file
   # preferences.
   
   $cgp_header = 1;
+
+  # assume initially that this message is not destined for an "all@" address
   
+  my $all_destination = 0;
+    
   foreach my $line (<MSGFILE>) 
   {
     if ($cgp_header) 
@@ -704,16 +714,15 @@ sub process_file
                 $local_address = 
                   $username.$account_detail.$hostname;
               }
-              elsif ($data->[1] eq "*@*")
+              elsif ($data->[1] =~ /\*@(\S*)/)
               {
-                # it's the special "alldomains" address
-                $local_address = "alldomains";
-              }
-              elsif ($data->[1] =~ /^\*(\S*)/)
-              {
-                # replace a leading "*" with "all" - it's an
-                # all@ address
-                $local_address = "all".$1;
+                # this is an "all@" message, so we need to process it with
+                # ADDHEADER for security reasons (since PIPE is a trusted
+                # source - silly CGP)
+                
+                debug(8, "all@ recipient address detected, using ".
+                         "ADDHEADER mode for all recipients");
+                $all_destination = 1;
               }
               elsif ($data->[2] =~ /#(\S*)/)
               {
@@ -856,7 +865,7 @@ sub process_file
   
   # Now determine our course of action
   
-  if ($conf->{headers_only})
+  if ($conf->{headers_only} || $all_destination)
   {
     # we're in "headers-only" mode, so we always run SA
     debug(7, "Running SpamAssassin in ADDHEADER mode.");

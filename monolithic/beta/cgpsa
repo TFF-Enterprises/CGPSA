@@ -62,8 +62,8 @@ our $config_directory = "Settings/";
 # Full paths to the configuration, lock, and standard error files.
 
 our $config_pathname = $cgp_base.$config_directory."cgpsa.conf";
-our $lock_pathname = $cgp_base.$config_directory."cgpsa.lock.test";
-our $error_pathname = $cgp_base.$config_directory."cgpsa.err.test";
+our $lock_pathname = $cgp_base.$config_directory."cgpsa.lock";
+our $error_pathname = $cgp_base.$config_directory."cgpsa.err";
 
 #
 # End of Customizable Variables
@@ -194,6 +194,16 @@ sub loadPreferences
     error_exit("Unable to read CGPSA configuration file, exiting.");
   }
   print("* Configuration File Loaded\n");
+  
+  print("* Parallel Requests Mode: ");
+  if ($conf->{parallel_requests})
+  {
+    print("On\n");
+  }
+  else
+  {
+    print("Off\n");
+  }
   
   # Redirect standard error to a file, if option is set.
   
@@ -1143,7 +1153,15 @@ sub readConfigFile
   $conf->{cgp_username} = "username";
   $conf->{cgp_password} = "password";
   $conf->{cgp_hostname} = "localhost";
-  $conf->{parallel_requests} = 0;
+  # parallel_requests defaults to on if we're not on Windows
+  if ($^O =~ /^(?:mswin|dos|os2)/oi)
+  {
+    $conf->{parallel_requests} = 0;
+  }
+  else
+  {
+    $conf->{parallel_requests} = 1;
+  }
   $conf->{headers_only} = 0;
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;

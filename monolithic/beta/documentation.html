@@ -8,10 +8,12 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.6</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1b1</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
+
+<p><em>This is a beta version of CGPSA. Read the release history before installing it.</em></p>
 
 <p>CGPSA works in concert with <a
 href="http://www.spamassassin.org/">SpamAssassin</a>&trade; software
@@ -38,9 +40,13 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a
 href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
 tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
-<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a>,
-released 5 May 2003.</p>
-<p>The current beta version of CGPSA is <a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b1.tgz">1.1b1</a>, released 17 June 2003. Read the <a href="http://www.tffenterprises.com/cgpsa/beta/">Beta Documentation</a> before downloading and installing the beta version.</p>
+<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a>,
+released 17 June 2003.</p>
+
+<p>The current beta version of CGPSA is <a
+href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b1.tgz">1.1b1</a
+>, released 17 June 2003. Information about new features of 1.1b1 can be
+found in the <a href="#history">revision history</a>.</p>
 
 <h2>Documentation</h2>
 
@@ -49,6 +55,7 @@ released 5 May 2003.</p>
 <ul>
 <li><a href="#overview">Overview</a></li>
 <li><a href="#installation">Installation</a></li>
+<li><a href="#reversion">Reverting to CGPSA 1.0.x</a></li>
 <li><a href="#license">License and Fees</a></li>
 <li><a href="#bugs">Bugs Reports, Feature Requests and the Like</a></li>
 <li><a href="#history">Revision History</a></li>
@@ -59,6 +66,8 @@ released 5 May 2003.</p>
 <hr/>
 
 <h3 id="overview">Overview</h3>
+
+<p><i>The overview has not changed from the previous release version.</i></p>
 
 <p>CGPSA has two basic operating modes, "<a
 href="#overview:fullfeatured">full-featured</a>" and "<a
@@ -106,6 +115,9 @@ messages to remote servers.</p>
 <hr/>
 
 <h3 id="installation">Installation</h3>
+
+<p><i>The installation procedure has not changed from the previous release
+version.</i></p>
 
 <p>Installation of CGPSA takes several steps. The following
 step-by-step instructions should enable you to get the filter working
@@ -248,14 +260,32 @@ much of it isn't too useful).</p>
 
 <hr/>
 
+<h3 id="reversion">Reverting to CGPSA 1.0.x</h3>
+
+<p>If you decide to revert your system to a 1.0 version of CGPSA, and you 
+have user-level preferences for any of your users, you must move those 
+preferences back to the location where CGPSA 1.0.x expects them. To do so, 
+follow these instructions:</p>
+<ol>
+<li>Turn off CGPSA, by unchecking "Use Filter" for the CGPSA filter on the 
+"Helper Settings" page of the CommuniGate Pro web administration interface 
+and clicking the "Update" button.<br/><br/></li>
+<li>Replace your beta CGPSA script with <a href="http://www.tffenterprises.com/cgpsa/">the 
+latest release version</a> (1.0.7 or higher). There is no need to change
+<code>cgpsa.conf</code>, since a 1.0.x CGPSA will ignore settings that
+don't exist for that version.<br/><br/></li>
+<li>Turn on CGPSA, by checking "Use Filter" for the CGPSA filter on the 
+"Helper Settings" page of the CommuniGate Pro web administration interface 
+and clicking the update button.<br/><br/></li>
+</ol>
 <h3 id="disclaimer">Disclaimer</h3>
 
-<p>It is possible that CGPSA contains bugs, although it has already been
-in use for months in production systems and we consider it relatively
-stable. Any bugs that might exist in CGPSA are unlikely to cause the
-loss of email, because CommuniGate Pro is very intelligent about how it
-works with external filters - when a filter fails, the message stays
-enqueued. However, it is <em>possible</em> that email could be lost.
+<p>This is a beta. It may very well have bugs in it. It hasn't been tested
+for as long as a regular release. Any bugs that might exist in it are 
+unlikely to cause the loss of email, because CommuniGate Pro is very 
+intelligent about how it works with external filters - when a filter fails, 
+the message stays enqueued. However, it is <em>possible</em> that email 
+could be lost.
 There is no warranty, express or implied, associated with CGPSA; we will
 not be liable for any lost email. Use at your own risk.</p>
 
@@ -298,7 +328,7 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1.1.tgz">1.1b1</a> - ?</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1.1.tgz">1.1b1</a> - 17 June 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -330,11 +360,6 @@ only scanning the first 250K of each message.</li>
 <li>Changed the location of the per-user configurations used by CGPSA (old 
 configurations will automatically be moved to the new location).</li>
 </ul>
-<p>Bug Fixes</p>
-<ul>
-<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have 
-been delivered when it shouldn't have been.</li>
-</ul>
 <p>Known Issues</p>
 <ul>
 <li>If CGPSA has to truncate a message in order to scan it, that message
@@ -345,6 +370,24 @@ going away).</li>
 <li>Entries in the CGP log that are line-wrapped have "\t" as their leading
 character when CGPSA is used with Perl earlier than 5.8. This is a result of
 limitations in the older Text::Wrap code.</li>
+</ul>
+</dd>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a> - 17 June 2003</dt>
+<dd>
+<p>Changes</p>
+<ul>
+<li>Added the ability to use per-user preferences in either the old
+location (the user's account directory) or the new location (the user's
+"account.web" directory). This is primarily so that users of the 1.1 betas
+can have a stable version to revert to without manually moving preferences
+back and forth.</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have 
+been delivered when it shouldn't have been. Mail to "all@" and "alldomains@"
+addresses is now scanned in ADDHEADER mode, to preserve CGP's security
+model for such mail.</li>
 </ul>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
@@ -426,8 +469,8 @@ read from the configuration file.</li>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_1.tgz">1.0.1</a> - 27 March 2003</dt>
 <dd>
-<ul>
 <p>Changes</p>
+<ul>
 <li>Added the "install CGP::CLI" step to the installation instructions.</li>
 <li>Added runtime check for CGP::CLI module, so that it need not be
 installed if CGPSA is running with "use_cli" set to false (or in headers-only mode). The module can be installed as <code>CGP/CLI.pm</code> or just <code>CLI.pm</code>.</li>

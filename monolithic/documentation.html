@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.6</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.7</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -38,9 +38,9 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a
 href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
 tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
-<a href="http://www.tffenterprises.com/cgpsa/cgpsa-1_0_6.tgz">1.0.6</a>,
-released 5 May 2003.</p>
-<p>There is no beta version available at this time.</p>
+<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a>,
+released 17 June 2003.</p>
+<p>The current beta version of CGPSA is <a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b1.tgz">1.1b1</a>, released 17 June 2003. Read the <a href="http://www.tffenterprises.com/cgpsa/beta/">Beta Documentation</a> before downloading and installing the beta version.</p>
 
 <h2>Documentation</h2>
 
@@ -298,8 +298,27 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a> - 17 June 2003</dt>
+<dd>
+<p>Changes</p>
+<ul>
+<li>Added the ability to use per-user preferences in either the old
+location (the user's account directory) or the new location (the user's
+"account.web" directory). This is primarily so that users of the 1.1 betas
+can have a stable version to revert to without manually moving preferences
+back and forth.</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have 
+been delivered when it shouldn't have been. Mail to "all@" and "alldomains@"
+addresses is now scanned in ADDHEADER mode, to preserve CGP's security
+model for such mail.</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
 <dd>
+<p>Changes</p>
 <ul>
 <li>Added an option (turned on by default) to redirect SpamAssassin's
 error output to a file rather than to standard error. This solves a
@@ -309,6 +328,9 @@ systems (including Mac OS X).</li>
 settings files being used; the path to the default settings file is output
 at filter startup time, and the paths to user settings files are output
 when those files are used.</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
 <li>Fixed a race condition where CGPSA would check for the ability
 to connect to the CLI before the CommuniGate server was ready to accept
 connections to the PWD port.</li>
@@ -318,12 +340,16 @@ accurately reflect its default value.</li>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_5.tgz">1.0.5</a> - 14 April 2003</dt>
 <dd>
+<p>Changes</p>
 <ul>
 <li>Added some extra debugging output in various places, including 
 printing of the preferences file location and the SpamAssassin version
 at startup.</li>
 <li>Added support for the new "Route Mail" CLI command option (for 
 CommuniGate 4.1b3 and higher; compatibility is auto-detected).</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
 <li>Fixed a problem where mail to the "all@" and "alldomains" 
 addresses would be bounced because of routing errors.</li>
 <li>Fixed a problem where CGPSA would use root's home directory to 
@@ -334,6 +360,7 @@ read from the configuration file.</li>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_4.tgz">1.0.4</a> - 2 April 2003</dt>
 <dd>
+<p>Changes</p>
 <ul>
 <li>Added the "use_c_locale" configuration option, to force the C locale to be used by Perl when running SpamAssassin (which has some known problems with certain locales). The default is to use the C locale.</li>
 <li>Added more logic to the headers-only mode, so that we now produce the same headers as SpamAssassin would if it were rewriting the message itself.</li>
@@ -344,17 +371,22 @@ read from the configuration file.</li>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_3.tgz">1.0.3</a> - 30 March 2003</dt>
 <dd>
+<p>Changes</p>
 <ul>
 <li>Added the "parallel_requests" setting, which defaults to "false". This addresses problems on Win32, and potentially on other platforms as well, with the mechanism currently used to process multiple emails in parallel.</li>
-<li>Fixed a problem where the "headers_only" setting was not read properly.</li>
-<li>Fixed a problem where, if there was no default SpamAssassin preferences file and user preferences were not being used, no mail would be scanned.</li>
 <li>Changed the default settings for "use_user_prefs", "require_user_prefs", and "use_user_state" to "no".</li>
 <li>Removed OS name and Perl version from X-TFF-CGPSA-Version header.</li>
 <li>Added clarification in the configuration file that the default home directory setting should not be quoted.</li>
 </ul>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed a problem where the "headers_only" setting was not read properly.</li>
+<li>Fixed a problem where, if there was no default SpamAssassin preferences file and user preferences were not being used, no mail would be scanned.</li>
+</ul>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_2.tgz">1.0.2</a> - 27 March 2003</dt>
 <dd>
+<p>Bug Fixes</p>
 <ul>
 <li>Fixed a problem where the CGP CLI module wouldn't load properly if it wasn't found as "CGP/CLI.pm".</li>
 <li>Fixed a problem where, under certain circumstances, Perl's Taint Mode (security infrastructure) prevented CGPSA from removing some temporary files used in SpamAssassin initialization.</li>
@@ -363,6 +395,7 @@ read from the configuration file.</li>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_1.tgz">1.0.1</a> - 27 March 2003</dt>
 <dd>
+<p>Changes</p>
 <ul>
 <li>Added the "install CGP::CLI" step to the installation instructions.</li>
 <li>Added runtime check for CGP::CLI module, so that it need not be
@@ -404,7 +437,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-5 May 2003<br />
+17 June 2003<br />
 </address>
 </body>
 </html>
