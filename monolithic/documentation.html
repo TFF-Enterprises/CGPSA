@@ -121,9 +121,9 @@ system. Also install any auxiliary programs you want SpamAssassin to
 use, such as Razor and DCC. <a href="http://www.cpan.org/">Perl</a> is a
 prerequisite for SpamAssassin. Instructions for installing SpamAssassin
 on Win32 operating systems are available <a
-href="http://www.openhandhome.com/howtosa250.html">here</a>. You must
-add <code>RES_NAMESERVERS</code> to your system environment variables on
-Win32, to enable DNS lookups under Perl.</li>
+href="http://www.openhandhome.com/howtosa250.html">here</a>. On Win32,
+you must add <code>RES_NAMESERVERS</code> to your system environment
+variables to enable DNS lookups under Perl (this is discussed in the installation instructions for SpamAssassin).<br/><br/></li>
 
 <li>Verify that the path in the first line of the <code>cgpsa</code>
 script points to the Perl executable on your system. If you have Perl
@@ -194,14 +194,15 @@ CGPSA.<br/><br/></li>
 
 <li>In the CommuniGate Pro web administration interface, go to the
 "Helper Settings" page (under "Settings/General"). In an empty "Content
-Filtering" section, enter a name for the filter (such as "CGPSA"), and
-the full path to the filter (see step 4). On Win32, enter
-<code>perl</code> followed by the full path to the filter (example:
-<code>perl C:/CommuniGate Files/cgpsa</code>. Set the Log level to "Low
-Level" or "All Info" (for now). Leave "Time-out" and "Auto-Restart" set
-to "Disabled" unless you experience problems with the filter (be
-optimistic for the time being). Finally, enable the filter and save your
-changes.<br/><br/></li>
+Filtering" section, enter a name for the filter (such as "CGPSA"). For
+the Program Path on UNIX, enter the full path to the filter (example:
+<code>/var/CommuniGate/cgpsa</code> - see step 4). For the Program Path
+on Win32, enter <code>perl</code> followed by the full path to the
+filter (example: <code>perl C:/CommuniGate Files/cgpsa</code>. Set the
+Log level to "Low Level" or "All Info" (for now). Leave "Time-out" and
+"Auto-Restart" set to "Disabled" unless you experience problems with the
+filter (be optimistic for the time being). Finally, enable the filter
+and save your changes.<br/><br/></li>
 
 <li>Examine the CommuniGate Pro log for the current day, and search
 for the string you entered as the filter's name in the previous
@@ -223,7 +224,7 @@ attained with the following conditions: "Any Route is LOCAL*" and
 "Header Field is not X-TFF-CGPSA-Filter*" (or whatever you've changed
 the loop prevention header to). Note that omitting the first of these
 conditions means that mail distributed to remote servers will be
-scanned (which may not be a good idea).</li>
+scanned (which may not be a good idea - in full-featured mode with the CLI, CGPSA will automatically leave mail for remote servers alone, but in other modes, it scans every message passed to it).</li>
 
 </ol>
 
@@ -294,8 +295,7 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <li>Fixed a problem where, if there was no default SpamAssassin preferences file and user preferences were not being used, no mail would be scanned.</li>
 <li>Changed the default settings for "use_user_prefs", "require_user_prefs", and "use_user_state" to "no".</li>
 <li>Removed OS name and Perl version from X-TFF-CGPSA-Version header.</li>
-<li>Added clarification that the default home directory in the configuration
-file should not be quoted.</li>
+<li>Added clarification in the configuration file that the default home directory setting should not be quoted.</li>
 </ul>
 </dd>
 <dt>1.0.2 - 27 March 2003</dt>
