@@ -1,0 +1,127 @@
+<?xml version="1.1" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "xhtml11.dtd">
+<!-- $Id$ -->
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>CGPSA - A Spam Filter for CommuniGate (R) Pro</title>
+<link rel="stylesheet" href="style.css" type="text/css" media="screen" />
+</head>
+<body>
+<h1>CGPSA - A Spam Filter for CommuniGate (R) Pro<br/>Version 1.0</h1>
+<h2>Copyright (C) 2002-2003 TFF Enterprises<br/>
+Written by Daniel M. Zimmerman<br/>
+All Rights Reserved</h2>
+
+<p>CGPSA works in concert with SpamAssassin (TM) software to scan emails being transferred by a CommuniGate Pro server. The filter uses the SpamAssassin API directly, rather than relying on a daemon process such as spamd and the execution of shell scripts (as the usual process for utilizing SpamAssassin with CommuniGate servers does); it is, therefore, quite efficient. It can safely be used with multiple CommuniGate Pro enqueuer threads.</p>
+
+<p>CGPSA supports all features of SpamAssassin, including such functionality as the use of Razor and Razor2, DCC, Bayesian learning (with SpamAssassin 2.5 or higher), and auto-whitelists. All these features are controlled through SpamAssassin's regular configuration files; for more information on them, see SpamAssassin's documentation.</p>
+
+<p>This documentation is broken into the following sections:</p>
+
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#license">License and Fees</a></li>
+<li><a href="#bugs">Bugs Reports, Feature Requests and the Like</a></li>
+<li><a href="#future">Future Plans</a></li>
+<li><a href="#legal">Legal Stuff</a></li>
+</ul>
+
+<hr/>
+
+<h3 id="overview">Operation Overview</h3>
+
+<p>CGPSA has two basic operating modes, "full-featured" and "headers-only".</p>
+
+<h4 id="overview:fullfeatured">Full-Featured Mode</h4>
+
+<p>Full-featured mode uses CommuniGate Pro's PIPE functionality to resubmit
+messages to the server after scanning, and can also use the CommuniGate Pro
+CLI to determine information about message recipients. In this mode, email
+is scanned only for the recipients on the local system, and email for remote
+systems is always left unaltered (this is good, because SpamAssassin headers
+added according to your local policy may interfere with the spam filtering
+policy of a remote system). If a particular message is destined for both
+local and remote users, the local users receive a scanned copy and the
+remote users an unaltered one. Scanned email is treated exactly as
+SpamAssassin would treat it; for instance, if the SpamAssassin preferences say to rewrite the subject line, the scanned mail will have rewritten subject lines. </p>
+
+<p>Other advanced functionality, such as the use of individual SpamAssassin
+preference files and state (auto-whitelist, Bayes database) files for
+particular users, is also available in full-featured mode. At this time,
+there is no user interface for users to configure individual SpamAssassin
+preferences; however, system administrators with access to the CommuniGate
+Pro directory may take advantage of these features for their own use. Individual user preferences are located in a <code>.spamassassin</code> directory inside the CommuniGate Pro accound directory corresponding to the account (<code>username.macnt</code>).</p>
+
+
+<h4 id="overview:headersonly">Headers-Only Mode</h4>
+
+<p>Headers-only mode does not use the CommuniGate Pro CLI, or CommuniGate
+Pro's PIPE functionality. Instead, it adds headers to messages directly
+through CommuniGate's external filter interface. This has the benefit of
+being more efficient than using PIPE, because it does not require
+resubmission and reprocessing of messages; however, it also eliminates much
+of the advanced functionality, such as the use of individual preference and
+state files, and the ability to leave messages to non-local destinations
+unaltered.</p>
+
+
+<h3 id="installation">Installation</h3>
+
+<p>Installation of CGPSA takes several steps. The following are step-by-step instructions that should enable you to get the filter working on your system. If you can't get it working, ask for help (as described below in <a href="#bugs">Bug Reports, Feature Requests and the Like</a>).</p>
+
+<p>Note that CGPSA has not been tested on Windows - not even a little bit. I have no idea if it will work, or how these steps will have to be changed in order to install it on Windows. If anybody tries it, please let me know what happens and how you installed it, so I can put that information in a future version of this documentation.</p>
+
+<ol>
+<li>Install SpamAssassin on your system. The way to do this is platform dependent - on FreeBSD, for example, you might use the FreeBSD Ports system. Also install any auxiliary programs you want SpamAssassin to use, such as Razor and DCC.<br/>Perl is a prerequisite for SpamAssassin; note that there are some problems on Linux with current versions of Perl and the UTF-8 locale, and it is not recommended that you run SpamAssassin in such a configuration. For more information on this, see the SpamAssassin web site.</li>
+<li>Verify that the path in the first line of the <code>cgpsa</code> script points to the Perl executable on your system. If you have Perl in a different location (such as <code>/usr/local/bin/perl</code>, or <code>/opt/bin/perl</code>), change the line accordingly.</li>
+<li>Verify that the <code>$cgp_base</code> variable (listed under "Customizable Variables" in the <code>cgpsa</code> script) has the correct path to your CommuniGate Pro Base Directory (hereafter referred to as "CommuniGate directory", for brevity). By default, this is <code>/var/CommuniGate</code>, which should work on most systems.</li>
+<li>Install the <code>cgpsa</code> script inside your CommuniGate directory. You can create a new subdirectory for it, or just put it at the top level; it doesn't really matter where it is, but make sure you know the full path to it (<code>/var/CommuniGate/cgpsa</code>, if you've got it at the top level of your CommuniGate directory and your CommuniGate directory is at the default location) - you'll need the path later.</li>
+<li>Install the <code>cgpsa.conf</code> configuration file into the <code>Settings</code> directory of your CommuniGate directory. Modify any of the settings you want to change - they are all well documented in the configuration file itself. If you are running in full-featured mode, create a CommuniGate Pro account with PWD access as described in the configuration file, using the username and password you've specified. Also be sure to enable a sufficient number of PWD connections, as described in the configuration file.</li>
+<li>Create the "default home directory" (the path is set in the <code>cgpsa.conf</code> file). This is where the default SpamAssassin preferences and state files - that is, those that are used when individual user preferences are not used - will be stored.</li>
+<li>Create a SpamAssassin configuration in the default home directory, if necessary. If the CommuniGate server is the only thing on your system using SpamAssassin, you can just use SpamAssassin's <code>local.cf</code> file (wherever it is stored on your system) to set up SpamAssassin's preferences; otherwise, you should create a <code>.spamassassin</code> directory inside the default home directory, and a <code>user_prefs</code> file inside that directory, containing the SpamAssassin preferences to be used by CommuniGate.</li>
+<li>Open the CommuniGate Pro web administration interface, and go to the "Helper Settings" page (under "Settings/General"). In an empty "Content Filtering" section, enter a name for the filter (I use "CGPSA"), and the full path to the filter (from step 4). Set the Log level to "Low Level" (for now). Leave "Time-out" and "Auto-Restart" set to "Disabled" unless you experience problems with the filter hanging (be optimistic for the time being). Enable the filter (by checking the checkbox), and save your changes.</li>
+<li>Go to the CommuniGate Pro log for the current day, and search for the string you entered as the Filter's name. You should see a line that reads similar to the following: "* TFF Enterprises CGPSA Filter 1.0 Ready". If you do not see this line, wait a few seconds and look again. If, after a minute or so, you still do not see it, that means something went wrong, and there will likely be an error message in the log. If you can make sense of it and fix whatever went wrong, wonderful; if not, ask for help (as described below in <a href="#bugs">Bug Reports, Feature Requests and the Like</a>).</li>
+<li>Go to the "Server-Wide Rules" page ("Settings/Rules"), and create a rule for the filter. For efficiency, this rule should probably have as conditions "Any Route is LOCAL*" and "Header Field is not X-TFF-CGPSA-Filter*" (or whatever you've changed the loop prevention header to). The action should simply be "ExternalFilter CGPSA" (or whatever you named the filter).</li>
+</ol>
+
+<p>If all went well, you're done. Send a test message to yourself and see whether or not the filter works. You may want to change the log level after running the filter for a while, because it does generate quite a lot of output (it's pretty interesting output, but if you aren't writing/debugging the filter, some of it isn't too useful).</p>
+
+<h3 id="disclaimer">Disclaimer</h3>
+
+<p>This is the first public release of CGPSA. As such, though it has been in use for months in production systems while under development, it is possible that it contains bugs. None of these are likely to cause the loss of email, because CommuniGate Pro is very intelligent about how it works with filters - if the filter fails, the email stays enqueued. However, it is _possible_ that email could be lost. There is no warranty, express or implied, associated with this filter; we will not be liable for any lost email. Use at your own risk.</p>
+
+
+<h3 id="license">License and Fees</h3>
+
+<p>The final licensing model for CGPSA has not been determined. Because it has very similar functionality to the filter that Stalker is offering for yearly licensing fees starting at $279, and because significant effort has been put into it, it would be good to receive something in return; however, charging licensing fees even remotely similar to those charged by Stalker makes no sense. Currently, I'm leaning toward some sort of shareware/donationware model. If you have any suggestions in this regard (i.e., how much is the filter worth to you?), let me know.</p>
+
+<p>In the meantime, CGPSA is not to be redistributed without explicit permission, and its source code may not be used in any other products, open-source or not, without explicit permission. You may of course modify the source code in any way you like for use on your own system.</p>
+
+
+<h3 id="bugs">Bug Reports, Feature Requests, and the Like</h3>
+
+<p>Suggestions for feature improvements and bug fixes will gladly be accepted. There is a mailing list for discussion about this filter, <code>cgpsa-discuss@tffenterprises.com</code>; this mailing list is the primary channel for support, discussion of feature requests and bug fixes, etc. It's a standard CGP mailing list: you can join it by emailing <a href="mailto:cgpsa-discuss-on@tffenterprises.com">cgpsa-discuss-on@tffenterprises.com</a>. I expect it to be pretty low traffic; if you don't want to join the list, though, send any questions, comments, rants, etc. to <a href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
+
+<h3 id="future">Future Plans</h3>
+
+<p>I'd like a better name for the filter. If anybody has any suggestions, I'd really appreciate hearing them...</p>
+
+<p>A future version of the filter should have a user interface to support individual auto-whitelists, Bayes databases, and SpamAssassin preferences for CommuniGate users. The filter is also being refactored to be somewhat more object-oriented and modular (because 1000-line Perl scripts are not the easiest things in the world to maintain).</p>
+
+<h3 id="Legal">Legal Stuff</h3>
+
+<p>CommuniGate is a registered trademark of Stalker Software, Inc. SpamAssassin is a registered trademark of Deersoft, Inc.</p>
+
+<hr/>
+
+<address><a
+href="http://validator.w3.org/check/referer"><img
+src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
+height="31" width="88" /></a> Last modified by <a
+href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
+23 March 2003<br />
+</address>
+</body>
+</html>
