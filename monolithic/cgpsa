@@ -86,7 +86,12 @@ use Fcntl qw(:DEFAULT :flock); # import LOCK_* constants
 use Mail::SpamAssassin;
 use Mail::SpamAssassin::NoMailAudit;
 use Text::Wrap;
-eval { use Time::HiRes qw(time); }; # use hi-res time if available
+eval 
+{ 
+  # use hi-res time if available
+  require Time::HiRes; 
+  Time::HiRes->import(qw(time)); 
+};
   
 $SIG{'HUP'} = \&signalHUP;
 
