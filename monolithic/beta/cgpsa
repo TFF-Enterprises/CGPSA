@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f2
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4f1";
+our $VERSION = "1.4f2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1204,7 +1204,6 @@ sub checkMessage
 
   my $status = undef;
   my $rewritten_mail_scalar = undef;
-  my $rewritten_mail = undef;
   
   eval 
   {
@@ -1232,7 +1231,7 @@ sub checkMessage
     {
       $mail = $spamassassin->parse([@scanlines], 1);
     }
-
+    
     # And now we're ready to scan!
     
     if ($status = $spamassassin->check($mail))
@@ -1241,19 +1240,15 @@ sub checkMessage
       {
         $mail->replace_original_message([@$msg_ptr]);
       }
-      else
+      else # SA3
       {
         my @msg_copy = @$msg_ptr;
-        my $orig_mail = $spamassassin->parse([@msg_copy]);
-        $status->{msg} = $orig_mail;
+        $mail->finish();
+        $mail = $spamassassin->parse([@msg_copy], 1);
+        $status->{msg} = $mail;
       }
-        
+
       $rewritten_mail_scalar = $status->rewrite_mail();
-      
-      if ($root_conf->{spamassassin_api_version} == 3)
-      {
-        $rewritten_mail = $spamassassin->parse($rewritten_mail_scalar);
-      }
       
       my $was_it_spam;
       if ($status->is_spam()) 
@@ -1278,21 +1273,30 @@ sub checkMessage
   
   if ($@) 
   {
-    # Something bad happened with SpamAssassin
+    # Something bad happened with SpamAssassin, so we need to add failure
+    # headers to the original email
     
-    if ($root_conf->{spamassassin_api_version} == 2)
-    {
-      $mail->replace_header
-        ($root_conf->{loop_prevention_header}, "Scan Failed");
-    }
-    else # SA3
-    {
-      $rewritten_mail = $mail;
-      $rewritten_mail->delete_header($root_conf->{loop_prevention_header});
-      $rewritten_mail->header
-        ($root_conf->{loop_prevention_header}, "Scan Failed\n");
-    }
+    my $blank = 0;
+    $rewritten_mail_scalar = "";
     
+    foreach my $line (@$msg_ptr)
+    {
+      if (($blank == 0) && ($line =~ /^\s+$/))
+      {
+        # a blank line, end of headers
+       
+        $rewritten_mail_scalar .=
+          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+        $rewritten_mail_scalar .= 
+          $root_conf->{loop_prevention_header} . ": Scan Failed\n\n";
+        $blank = 1;
+      }
+      else
+      {
+        $rewritten_mail_scalar .= $line;
+      }
+    }
+
     ${$is_spam_ptr} = 0;
     ${$score_ptr} = 0.0;
     
@@ -1301,43 +1305,36 @@ sub checkMessage
   }
   else
   {
-    if ($root_conf->{spamassassin_api_version} == 2)
-    {
-      $mail->replace_header
-        ($root_conf->{loop_prevention_header}, "Scanned");
-    }
-    else # SA3
-    {
-      $rewritten_mail->delete_header($root_conf->{loop_prevention_header});
-      $rewritten_mail->header
-        ($root_conf->{loop_prevention_header}, "Scanned\n");
-    }
-  }
+    # We need to add success headers to the rewritten email
     
-  if ($root_conf->{spamassassin_api_version} == 2)
-  {
-    $mail->replace_header($VERSIONHEADERNAME, $VERSIONHEADERTEXT);
-    $rewritten_mail_scalar = $mail->as_string();
+    my $blank = 0;
+    my @rewritten_lines = split (/^/m, $rewritten_mail_scalar);
+    $rewritten_mail_scalar = "";
+    
+    foreach my $line (@rewritten_lines)
+    {
+      if (($blank == 0) && ($line =~ /^\s+$/))
+      {
+        # a blank line, end of headers
+       
+        $rewritten_mail_scalar .=
+          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+        $rewritten_mail_scalar .= 
+          $root_conf->{loop_prevention_header} . ": Scanned\n\n";
+        $blank = 1;
+      }
+      else
+      {
+        $rewritten_mail_scalar .= $line;
+      }
+    }
   }
-  else # SA3
-  {
-    $rewritten_mail->delete_header($VERSIONHEADERNAME);
-    $rewritten_mail->header($VERSIONHEADERNAME, $VERSIONHEADERTEXT."\n");
-    $rewritten_mail_scalar = 
-        $rewritten_mail->get_all_headers(1) . "\n" . 
-        $rewritten_mail->get_pristine_body();
-  }
-  
+
   if ($status)
   {
     $status->finish();
   }
 
-  if ($rewritten_mail)
-  {
-    $rewritten_mail->finish();
-  }
-  
   $mail->finish();
   return $rewritten_mail_scalar;
 }
