@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.4f3</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.4f4</h1>
 <h2>Copyright &copy; 2002-2004 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -49,8 +49,8 @@ href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_5.tgz">1.3.5</a>,
 released 2 December 2004.</p>
 
 <p>The current testing version of CGPSA is <a
-href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_4f3.tgz">1.4f3</a
->, released 2 December 2004. A summary of the new features of the 1.4 
+href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_4f4.tgz">1.4f4</a
+>, released 8 December 2004. A summary of the new features of the 1.4 
 release can be found in the <a href="#history">revision history</a>.</p>
 
 <h2>Documentation</h2>
@@ -346,20 +346,6 @@ domain.</p></p>
 
 <hr/>
 
-<h3 id="disclaimer">Disclaimer</h3>
-
-<p>This is an early beta. It may very well have bugs in it. It contains
-a lot of new code (about 500 lines, 1/3 of the total size of CGPSA 1.2,
-have been added), which hasn't been tested for very long. Any bugs that
-might exist in it are unlikely to cause the loss of email, because
-CommuniGate Pro is very intelligent about how it works with external
-filters - when a filter fails, the message stays enqueued. However, it
-is <em>possible</em> that email could be lost. There is no warranty,
-express or implied, associated with CGPSA; we will not be liable for any
-lost email. Use at your own risk.</p>
-
-<hr/>
-
 <h3 id="license">License and Fees</h3>
 
 <p>The final licensing model for CGPSA has not been determined. It has
@@ -402,14 +388,24 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 
 <dl>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa_1.4f3.tgz">1.4f3</a> - 2 December 2004</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa_1.4f4.tgz">1.4f4</a> - 8 December 2004</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+
+<li>Fixed an issue where SpamAssassin headers would not be added to messages if CGPSA was used in full-featured mode with SpamAssassin 2.6x.<br/><br/></li>
+
+</ul>
+</dd>
+
+<dt>1.4f3 - 2 December 2004</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
 
 <li>Fixed an issue where messages would be truncated if CGPSA was used in full-featured mode with SpamAssassin 2.6x.</li>
 
-<li>Fixed an issue where CGPSA would generate spurious error messages about uninitialized values.</li>
+<li>Fixed an issue where CGPSA would generate spurious error messages about uninitialized values.<br/><br/></li>
 
 </ul>
 </dd>
@@ -1102,7 +1098,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-2 December 2004<br />
+8 December 2004<br />
 </address>
 </body>
 </html>
