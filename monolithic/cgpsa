@@ -428,7 +428,7 @@ sub mainLoop
     {
       lockStandardOutput();
       print("* Handled maximum number of requests (".
-            $conf->{max_requests}.", exiting.\n");
+            $conf->{max_requests}."), exiting.\n");
       unlockStandardOutput();
       last;
     }
