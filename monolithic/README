@@ -1,4 +1,4 @@
-CGPSA - A Spam Filter for CommuniGate (R) Pro - Version 1.3.1
+CGPSA - A Spam Filter for CommuniGate (R) Pro - Version 1.3.2
 Copyright (C) 2002-2004 TFF Enterprises
 Written by Daniel M. Zimmerman
 All Rights Reserved
@@ -11,5 +11,5 @@ any way you like for use on your own system.
 If you are upgrading from a previous (1.1 or 1.2 series) release of
 CGPSA, be sure to read the documentation carefully; some system
 requirements have changed, most notably the required SpamAssassin
-version (CGPSA 1.3.x requires SpamAssassin 2.6 or higher). The
-documentation is located in "documentation.html".
+version (CGPSA 1.3.x requires SpamAssassin 2.6x). The documentation is 
+located in "documentation.html".

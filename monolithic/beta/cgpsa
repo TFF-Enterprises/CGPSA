@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4b1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4a1
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -117,7 +117,7 @@ $SIG{'CHLD'} = \&signalCHLD;
 
 # Version string for this filter.
 
-our $VERSION = "1.4b1";
+our $VERSION = "1.4a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
