@@ -293,15 +293,19 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt>1.0.6 - Unreleased</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - Unreleased</dt>
 <dd>
 <ul>
+<li>Added information to the log output about the paths to the SpamAssassin 
+settings files being used; the path to the default settings file is output
+at filter startup time, and the paths to user settings files are output
+when those files are used.</li>
 <li>Fixed a race condition where CGPSA would check for the ability
 to connect to the CLI before the CommuniGate server was ready to accept
 connections to the PWD port.</li>
 </ul>
 </dd>
-<dt>1.0.5 - 14 April 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_5.tgz">1.0.5</a> - 14 April 2003</dt>
 <dd>
 <ul>
 <li>Added some extra debugging output in various places, including 
@@ -317,7 +321,7 @@ store SpamAssassin state files in certain configurations.</li>
 read from the configuration file.</li>
 </ul>
 </dd>
-<dt>1.0.4 - 2 April 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_4.tgz">1.0.4</a> - 2 April 2003</dt>
 <dd>
 <ul>
 <li>Added the "use_c_locale" configuration option, to force the C locale to be used by Perl when running SpamAssassin (which has some known problems with certain locales). The default is to use the C locale.</li>
@@ -327,7 +331,7 @@ read from the configuration file.</li>
 <li>Added the "direct_mailbox_rewrite" and "direct_mailbox_scan" configuration options, and removed the "direct_mailbox_passthrough" configuration option. This allow for more flexibility when determining the scanning policy for direct mailbox addresses. The default settings are to not rewrite direct mailbox addresses, and to not scan mail for direct mailbox addresses.</li>
 </ul>
 </dd>
-<dt>1.0.3 - 30 March 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_3.tgz">1.0.3</a> - 30 March 2003</dt>
 <dd>
 <ul>
 <li>Added the "parallel_requests" setting, which defaults to "false". This addresses problems on Win32, and potentially on other platforms as well, with the mechanism currently used to process multiple emails in parallel.</li>
@@ -338,7 +342,7 @@ read from the configuration file.</li>
 <li>Added clarification in the configuration file that the default home directory setting should not be quoted.</li>
 </ul>
 </dd>
-<dt>1.0.2 - 27 March 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_2.tgz">1.0.2</a> - 27 March 2003</dt>
 <dd>
 <ul>
 <li>Fixed a problem where the CGP CLI module wouldn't load properly if it wasn't found as "CGP/CLI.pm".</li>
@@ -346,7 +350,7 @@ read from the configuration file.</li>
 <li>Fixed a non sequitur in the documentation.</li>
 </ul>
 </dd>
-<dt>1.0.1 - 27 March 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_1.tgz">1.0.1</a> - 27 March 2003</dt>
 <dd>
 <ul>
 <li>Added the "install CGP::CLI" step to the installation instructions.</li>
@@ -354,7 +358,7 @@ read from the configuration file.</li>
 installed if CGPSA is running with "use_cli" set to false (or in headers-only mode). The module can be installed as <code>CGP/CLI.pm</code> or just <code>CLI.pm</code>.</li>
 </ul>
 </dd>
-<dt>1.0 - 23 March 2003</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0.tgz">1.0</a> - 23 March 2003</dt>
 <dd>
 <ul>
 <li>Initial release version.</li>
