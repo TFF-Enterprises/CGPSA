@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2.1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.2.2</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -38,7 +38,7 @@ from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) 
 version is
 <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a>,
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_2.tgz">1.2.2</a>,
 released 2 October 2003. There is currently no beta release
 available.</p>
 
@@ -355,6 +355,26 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_2.tgz">1.2.2</a> - 14 November 2003</dt>
+<dd>
+<p>Changes</p>
+<ul>
+<li>Added configuration options for specifying the install prefix,
+system rules directory, and custom rules directory for SpamAssassin.
+This should allow CGPSA to work properly, without hackery such as
+duplicating entire directory trees, on systems such as Win32 where
+current versions of SpamAssassin do not seem to correctly compile paths
+into SpamAssassin.pm.</li>
+<li>Added code to use Time::HiRes, if present, to give more accurate timing
+for SpamAssassin processing.</li>
+</ul>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed an issue where pathnames with spaces could not be used in the
+cgpsa.conf file (this was especially problematic for Windows
+users).</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a> - 2 October 2003</dt>
 <dd>
 <p>Bug Fixes</p>
@@ -585,7 +605,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-2 October 2003<br />
+14 November 2003<br />
 </address>
 </body>
 </html>

@@ -1297,7 +1297,7 @@ sub readConfigFile
   $conf->{debug} = 1;
   $conf->{debug_level} = 9;
   $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
-  $conf->{sa_prefix} = "":
+  $conf->{sa_prefix} = "";
   $conf->{sa_default_rules_dir} = "";
   $conf->{sa_local_rules_dir} = "";
   $conf->{use_user_prefs} = 0;
