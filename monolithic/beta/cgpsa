@@ -669,6 +669,12 @@ sub submitMessage
     # previously loaded) for the first element of the address list
 
     my $address = @addresses[0];
+    
+    # strip quotation marks out of the local address (we'll replace them
+    # later, if necessary)
+              
+    $address =~ s/\"//g;
+
     my $domain_name = "";
     if ($account_name =~ /\S*@(\S*)/)
     {
@@ -680,6 +686,7 @@ sub submitMessage
     if ($cli && $user_conf->{use_dma_spam_mailbox})
     {
       # Verify that DMA is enabled on the server
+      
       my $local_settings;
       if (my $local_settings = $cli->GetModule("LOCAL"))
       {
@@ -687,6 +694,7 @@ sub submitMessage
         if ($local_settings_hash{DirectMailboxes} eq "YES")
         {
           # DMA is enabled! Create the DMA spam mailbox if necessary
+          
           debug(9, "DMA spam filing enabled for ".$address);
           if (findOrCreateMailbox
                 ($account_name, $user_conf->{spam_mailbox_name}, \$cli))
@@ -694,15 +702,26 @@ sub submitMessage
             # we found or created the mailbox, so let's modify the
             # local address accordingly
          
-            if ($address =~ /^\S*#(\S*)@(\S*)$/)
+            if ($address =~ /^(.*)#(\S*)@(\S*)$/)
             {
               # it already has a DMA, so we remove it and put it in
               # an X-Originally-To header
+              
+              $orig_address = "\"".$1."#".$2."\"@".$3;
               $receiver_address = 
-                "\"".$user_conf->{spam_mailbox_name}."#".$1."\""."@".$2;
+                "\"".$user_conf->{spam_mailbox_name}."#".$2."\"@".$3;
+            }
+            elsif ($address =~ /^(\S*)@(\S*)$/)
+            {
+              # it's got a domain
+              
+              $receiver_address = 
+                "\"".$user_conf->{spam_mailbox_name}."#".$1."\"@".$2;
             }
             else
             {
+              # it's got no domain
+              
               $receiver_address = 
                 "\"".$user_conf->{spam_mailbox_name}."#".$address."\"";
             }
@@ -1353,8 +1372,8 @@ sub process_file
                   }
                 }
                 
-                if (($local_address =~ /(\S*)#(\S*)/) &&
-                     !$user_conf->{direct_mailbox_scan})
+                if (($dma_mailbox ne "") && 
+                    !$user_conf->{direct_mailbox_scan})
                 {
                   # there's DMA, so this is a "remote" address
                   debug(8, "Using direct mailbox addressing for ".
@@ -1551,10 +1570,11 @@ sub process_file
     # messages, we discard the message... otherwise we add headers
     
     if ($root_conf->{auto_discard} && 
-        $msg_score > $root_conf->{discard_threshold})
+        $msg_score >= $root_conf->{discard_threshold})
     {
       debug(7, "Discarding spam above threshold score (".
-               $msg_score."/".$root_conf->{discard_threshold});
+               sprintf("%.1f", $msg_score)."/".
+               $root_conf->{discard_threshold});
       printResult("DISCARD");
     }
     else
@@ -1626,13 +1646,14 @@ sub process_file
                        \$is_spam, \$msg_score);
         
         if ($domain_conf->{auto_discard} &&
-            ($msg_score > $domain_conf->{discard_threshold}))
+            ($msg_score >= $domain_conf->{discard_threshold}))
         {
           # it's spam, and it's above the domain's discard threshold
           
           debug(7, "Discarding above-threshold spam for all domain ".
-                   $domain_name." addresses (".$msg_score."/".
-                   $domain_conf->{discard_threshold}.")");
+                   $domain_name." addresses (".
+                   sprintf("%.1f", $msg_score)."/".
+                   $root_conf->{discard_threshold});                   
         }
         else
         {
@@ -1678,14 +1699,14 @@ sub process_file
                                     $account_dir, $local_address, 
                                     \$is_spam, \$msg_score);
       if ($is_spam && $user_conf->{auto_discard} &&
-          $msg_score > $user_conf->{discard_threshold})
+          $msg_score >= $user_conf->{discard_threshold})
       {
         # it's spam and it's above the user's threshold, so we
         # don't submit it at all
         
         debug(7, "Discarding above-threshold spam for local address ".
-                 $local_address." (".$msg_score."/".
-                 $user_conf->{discard_threshold}.")");
+                 $local_address." (".sprintf("%.1f", $msg_score)."/".
+                 $root_conf->{discard_threshold});
       }
       elsif ($is_spam)
       {
