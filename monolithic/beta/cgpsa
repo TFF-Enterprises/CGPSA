@@ -143,8 +143,8 @@ print("* TFF Enterprises CGPSA Filter $VERSION Starting\n");
 
 # Declare some "global" variables.
 
-our %root_conf_cache = ();
-our $root_conf = \%root_conf_cache;
+our %root_conf_hash = ();
+our $root_conf = \%root_conf_hash;
 our %domain_conf_cache = ();
 our %user_conf_cache = ();
 our @scan_domains = undef;
@@ -212,7 +212,7 @@ sub processHUP
 
   undef our $spamassassin;
   undef our @scan_domains;
-  undef our %root_conf_cache;
+  undef our %root_conf_hash;
   undef our $root_conf;
   undef our %domain_conf_cache;
   undef our %user_conf_cache;
@@ -802,8 +802,9 @@ sub getUserInformation
     }
   }
   
-  # ok, now we know the prefs - if they exist - are in the right place
-  # so we choose the prefs file to use
+  # ok, now we know that user-level SpamAssassin preferences, if they 
+  # exist, are in the right place; so we decide whether we'll use them or
+  # not.
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&  
       (-e "$account_dir/account.web/.spamassassin/user_prefs"))
   {
@@ -1737,7 +1738,8 @@ sub loadRootConfig
 sub loadDomainConfig
 {
   my $domain_name = shift;
-  my %conf = %root_conf_cache;
+  my %conf = ();
+  our %root_conf_hash;
   our %domain_conf_cache;
   our $root_conf;
   
@@ -1748,6 +1750,15 @@ sub loadDomainConfig
   elsif (!(exists $domain_conf_cache{$domain_name}))
   {
     debug(9, "Attempting to load domain configuration for ".$domain_name);
+    
+    # initialize it to the root configuration
+  
+    print("* Defaults:\n");  
+    foreach my $setting (keys %root_conf_hash)
+    {
+      $conf{$setting} = $root_conf_hash{$setting};
+      print("* $setting = ".$domain_conf->{$setting}."\n");
+    }
     
     readConfigFile
       (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
@@ -1801,17 +1812,14 @@ sub loadUserConfig
   if (!(exists $user_conf_cache{$user_name}))
   {
     debug(9, "Attempting to load user configuration for ".$user_name);
+    print("* Defaults:\n");
+    # initialize to values of domain configuration
+    foreach my $setting (keys %{$domain_conf})
+    {
+      $conf{$setting} = $domain_conf->{$setting};
+      print("* $setting = ".$domain_conf->{$setting}."\n");
+    }
 
-    # set default values
-    $conf{use_cgpsa} = $domain_conf->{use_cgpsa};
-    $conf{direct_mailbox_scan} = $domain_conf->{direct_mailbox_scan};
-    $conf{direct_mailbox_rewrite} = $domain_conf->{direct_mailbox_rewrite};
-    $conf{use_user_prefs} = $domain_conf->{use_user_prefs};
-    $conf{use_user_state} = $domain_conf->{use_user_state};
-    $conf{use_auto_whitelist} = $domain_conf->{use_auto_whitelist};
-    $conf{use_dma_spam_mailbox} = $domain_conf->{use_dma_spam_mailbox};
-    $conf{spam_mailbox_name} = $domain_conf->{spam_mailbox_name};
-    
     readConfigFile(\%conf, $settings_directory.our $user_config_filename);
 
     if (!$conf{no_configuration})
