@@ -127,7 +127,6 @@ my %cnf;
 our $conf = \%cnf;
 our @scan_domains = undef;
 our $spamassassin = undef;
-our $addrlistfactory = undef;
 
 # Load Time::HiRes if available
 
@@ -166,7 +165,6 @@ sub signalHUP
 sub processHUP
 {
   our $spamassassin;
-  our $addrlistfactory;
   our %pids;
   my $pid;
   
@@ -191,13 +189,7 @@ sub processHUP
     print("* HUP Signal Received, Re-initializing CGPSA.\n");
   }
 
-  if ($addrlistfactory)
-  {
-    $addrlistfactory->finish();
-  }
-  
   undef $spamassassin;
-  undef $addrlistfactory;
   
   loadPreferences();
   unlockStandardOutput();
@@ -310,7 +302,7 @@ sub loadPreferences
     require Mail::SpamAssassin::DBBasedAddrList;
   
     # create a factory for the persistent address list
-    our $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
+    my $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
     $spamassassin->set_persistent_address_list_factory($addrlistfactory);
   };
   
