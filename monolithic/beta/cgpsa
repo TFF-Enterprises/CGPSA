@@ -92,7 +92,7 @@ our $domain_config_suffix = "/".$domain_config_directory."cgpsa.conf";
 
 our $sa_prefs_dir_suffix = "/.spamassassin";
 our $sa_prefs_filename_suffix = "/user_prefs";
-our $sa_prefs_suffix = $sa_prefs_directory.$sa_prefs_filename;
+our $sa_prefs_suffix = $sa_prefs_dir_suffix.$sa_prefs_filename_suffix;
 
 # The name to use for CGPSA user configuration files. This name will be
 # appended to the path to the user's "account.web" directory to find their
@@ -1150,6 +1150,7 @@ sub checkMessage
     }
   }
   
+  prin
   # And now pass the preferences to SpamAssassin
   
   if ($root_conf->{spamassassin_api_version} == 3)
@@ -1893,7 +1894,7 @@ sub process_file
       my $is_spam = 0;
       debug(7, "Running SpamAssassin with settings from ".
                $account_dir.$sa_prefs_suffix.
-               "for local address ".$local_address);
+               " for local address ".$local_address);
       my $domain_name = "";
       if ($account_name =~ /^\S*@(\S*)$/)      
       {
