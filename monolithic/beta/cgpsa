@@ -2050,6 +2050,7 @@ sub loadRootConfig
 sub loadDomainConfig
 {
   my $domain_name = shift;
+  my $print_domain_name = $domain_name;
   my %conf = ();
   our %root_conf_hash;
   our %domain_conf_cache;
@@ -2059,17 +2060,14 @@ sub loadDomainConfig
   {
     if ($root_conf->{allow_domain_cgpsa_conf})
     {
-      if ($domain_name ne "")
+      if ($print_domain_name eq "")
       {
-        debug(8, "Attempting to load domain configuration for ".
-                 $domain_name);
-      }
-      else
-      { 
-        debug(8, "Attempting to load domain configuration for ".
-                 "main domain.");
+        $print_domain_name = "main domain";
       }
       
+      debug(8, "Attempting to load domain configuration for ".
+               $print_domain_name);
+
       # initialize it to the root configuration
   
       foreach my $setting (keys %root_conf_hash)
@@ -2108,7 +2106,7 @@ sub loadDomainConfig
       {
         # we successfully loaded something, let's cache it
         
-        debug(8, "Loaded domain configuration for ".$domain_name);
+        debug(8, "Loaded domain configuration for ".$print_domain_name);
         $domain_conf_cache{$domain_name} = \%conf;
       }
       else
@@ -2116,15 +2114,7 @@ sub loadDomainConfig
         # we didn't load anything, so for this domain we use the root
         # preferences
         
-        if ($domain_name ne "")
-        {
-          debug(8, "Using root configuration for ".$domain_name);
-        }
-        else
-        {
-          debug(8, "Using root configuration for main domain.");
-        }
-        
+        debug(8, "Using root configuration for ".$print_domain_name);        
         $domain_conf_cache{$domain_name} = $root_conf;
       }
     }
