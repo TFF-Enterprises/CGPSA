@@ -86,13 +86,7 @@ use Fcntl qw(:DEFAULT :flock); # import LOCK_* constants
 use Mail::SpamAssassin;
 use Mail::SpamAssassin::NoMailAudit;
 use Text::Wrap;
-eval 
-{ 
-  # use hi-res time if available
-  require Time::HiRes; 
-  Time::HiRes->import(qw(time)); 
-};
-  
+
 $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
@@ -133,6 +127,17 @@ my %cnf;
 our $conf = \%cnf;
 our @scan_domains = undef;
 our $spamassassin = undef;
+
+# Load Time::HiRes if available
+
+$conf->{have_time_hires} = 0;
+
+eval 
+{ 
+  require Time::HiRes; 
+  $conf->{have_time_hires} = 1;
+};
+  
 
 # Load our preferences.
 
@@ -685,7 +690,7 @@ sub checkMessageAddHeader
   }
   
   my $mail = Mail::SpamAssassin::NoMailAudit->new(data => [@scanlines]);
-  my $start = time;
+  my $start = getTime();
   my $newheaders = undef;
   
   # Let's do SpamAssassin! No need to read config, because we must have read
@@ -706,8 +711,9 @@ sub checkMessageAddHeader
       }
       my $msg_score = sprintf("%.1f", $status->get_hits);
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
+      
       debug(5, "$was_it_spam ($msg_score/$msg_threshold) in ".
-               sprintf("%.1f", time - $start)." seconds");
+               sprintf("%.1f", getTime() - $start)." seconds");
 
       # Add headers. This is very similar to the way SpamAssassin actually
       # does it, and we respect all of SpamAssassin's preferences (because
@@ -806,7 +812,7 @@ sub checkMessageAddHeader
   {
     # Something bad happened with SpamAssassin
     
-    debug(5, "SpamAssassin failed in ".sprintf("%.1f", time - $start).
+    debug(5, "SpamAssassin failed in ".sprintf("%.1f", getTime() - $start).
              " seconds: $@");
     $newheaders = $conf->{loop_prevention_header}.": Scan Failed\e";
   }
@@ -903,7 +909,7 @@ sub checkMessage
       my $msg_score = sprintf("%.1f", $status->get_hits);
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits);
       debug(5, "$was_it_spam ($msg_score/$msg_threshold) for ".
-               "$account_name in ".sprintf("%.1f", time - $start).
+               "$account_name in ".sprintf("%.1f", getTime() - $start).
                " seconds");
 
       $status->finish();
@@ -917,7 +923,7 @@ sub checkMessage
     $mail->replace_header($conf->{loop_prevention_header}, "Scan Failed");
 
     debug(5, "SpamAssassin failed for $account_name in ".
-             sprintf("%.1f", time - $start)." seconds: $@");
+             sprintf("%.1f", getTime() - $start)." seconds: $@");
   }
   else
   {
@@ -1565,6 +1571,19 @@ sub printExtraInfo
   lockStandardOutput();
   print($output_line."\n");
   unlockStandardOutput();
+}
+
+
+# Return the current time. If we have Time::HiRes, we use it.
+
+sub getTime
+{
+  my $result = time;
+  if ($conf->{have_time_hires})
+  {
+    $result = Time::HiRes::time;
+  }
+  return $result;
 }
 
 
