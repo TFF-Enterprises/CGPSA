@@ -1510,7 +1510,15 @@ sub process_file
   close(MSGFILE);
   
   # Now determine our course of action
-  
+  # First count the number of recipients using default SpamAssassin prefs
+  my $default_recipient_count = 0;
+  foreach my $domain_name (keys %default_recipients)
+  {
+    my %domain_recipients = %{$default_recipients{$domain_name}};
+    $default_recipient_count = 
+      $default_recipient_count + scalar(keys %domain_recipients);
+  }
+    
   if ($root_conf->{headers_only} || $all_destination)
   {
     # we're in "headers-only" mode, so we always run SA
@@ -1518,7 +1526,7 @@ sub process_file
     my $newheaders = checkMessageAddHeader(\@msglines, "");
     printResult("ADDHEADER", $newheaders);
   }
-  elsif ((scalar %default_recipients == 0) && 
+  elsif (($default_recipient_count == 0) &&
          (scalar %custom_recipient_accts == 0))
   {
     # if there are no addresses for which SpamAssassin must be run,
@@ -1541,7 +1549,7 @@ sub process_file
                     @remote_recipients);
     }
     
-    # then, submit a message for all local addresses using default
+    # submit a message for all local addresses using default
     # SpamAssassin prefs for the various domains
     
     my $rewritten_msg;
