@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2.2a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -90,7 +90,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.2.1";
+our $VERSION = "1.2.2a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1292,14 +1292,16 @@ sub readConfigFile
   {
     $line =~ s/\r//g;
     $line =~ s/(^|(?<!\\))\#.*$/$1/;
-    $line =~ s/^\s+//; s/\s+$//; 
+    $line =~ s/^\s+//; 
+    $line =~ s/\s+$//; 
+    
     next if ($line =~ /^$/);
 
     if ($line =~ /^cgp[-_]username[\s\=]+(\S+)$/) 
     {
       $conf->{cgp_username} = $1;
     }
-    elsif ($line =~ /^cgp[-_]password[\s\=]+(\S+)$/) 
+    elsif ($line =~ /^cgp[-_]password[\s\=]+(.+)$/) 
     {
       $conf->{cgp_password} = $1;
     }
@@ -1357,7 +1359,7 @@ sub readConfigFile
     {
       $conf->{debug_level} = scalar($1);
     }
-    elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(\S+)$/) 
+    elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(.+)$/) 
     {
       $conf->{default_home_dir} = $1;
     }
@@ -1385,7 +1387,7 @@ sub readConfigFile
     {
       $conf->{stop_at_threshold} = evaluateBoolean($1);
     }
-    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(\S+)$/) 
+    elsif ($line =~ /^helper[-_]state[-_]dir[\s\=]+(.+)$/) 
     {
       $conf->{helper_state_dir} = $1;
     }
