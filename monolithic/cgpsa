@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.6a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.6a2
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,7 +79,7 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.6a1";
+our $VERSION = "1.0.6a2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -123,9 +123,10 @@ if ($conf->{use_c_locale})
   $ENV{'LC_ALL'} = "C";
 }
 
-# We should set $ENV{'HOME'} in /tmp, to prevent creating files anywhere 
-# else in the system aside from our CGPro user dirs. We also set 
-# $ENV{'PATH'}, to avoid problems with Perl's Taint Mode.
+# We should set $ENV{'HOME'} to the default home directory, to prevent 
+# creating files anywhere else in the system aside from our CGPro user 
+# dirs and the default home directory. We also set $ENV{'PATH'}, to avoid 
+# problems with Perl's Taint Mode.
 
 $ENV{'HOME'} = $conf->{default_home_dir}; 
 $ENV{'PATH'} = "";
@@ -200,20 +201,10 @@ print("* TFF Enterprises CGPSA Filter $VERSION Ready\n");
 my $request = <STDIN>;
 our $seqnum; # global, so it can be printed in debug lines
 my %pids, my $pid;
-my $cli_checked = 0;
+our $cli_checked = 0;
 
 while ($request) 
 {
-  # If we're using the CLI, we need the CGP CLI module. 
-  # If it's not there, we gracefully abort. This check occurs
-  # the first time we receive input from the server.
-  
-  if (!$cli_checked)
-  {
-    check_cli();
-    $cli_checked = 1;
-  }
-  
   # Give child processes a chance to be cleaned up...
 
   foreach $pid (keys %pids)
@@ -240,6 +231,16 @@ while ($request)
     }
     elsif ($command =~ /FILE/i) 
     { 
+      # If we're using the CLI, we need the CGP CLI module. 
+      # If it's not there, we gracefully abort. This check occurs
+      # the first time we receive input from the server.
+      
+      if (!$cli_checked)
+      {
+        checkCLI();
+        $cli_checked = 1;
+      }
+      
       # CGPro is giving us a file to examine
       # Fork off a process, if we're running with parallel requests
       $pid = 0;
@@ -305,7 +306,7 @@ sub checkCLI
       {
         # OK, it's not anywhere...
         die "* Error: Current CGPSA configuration requires CGP::CLI ".
-            "module. Exiting.";
+            "module.";
       }
       
       my $cli = new CGP::CLI
@@ -317,7 +318,7 @@ sub checkCLI
        
       if (!$cli) 
       {
-        die "* Error: Could not connect to CommuniGate Pro CLI. Exiting.";
+        die "* Error: ".$CGP::ERR_STRING.". Exiting.";
       }
       
       # Check to see if the installed CommuniGate supports the "mail"
@@ -615,7 +616,7 @@ sub process_file
     if (!$cli) 
     {
       printResult("FAILURE");
-      debug(1, "Could not connect to CLI.");
+      debug(1, "CLI Error: ".$CGP::ERR_STRING.".");
       return;
     }
   }
