@@ -1,9 +1,0 @@
-img	{ border-style: none; }
-
-address img
-	{ float: right; }
-	
-.right
-	{ text-align: right; float: right; }
-
-.hideme	{ display: none; }
