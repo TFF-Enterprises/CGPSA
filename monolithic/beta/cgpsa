@@ -2105,7 +2105,15 @@ sub loadDomainConfig
         # we didn't load anything, so for this domain we use the root
         # preferences
         
-        debug(8, "Using root configuration for ".$domain_name);
+        if ($domain_name ne "")
+        {
+          debug(8, "Using root configuration for ".$domain_name);
+        }
+        else
+        {
+          debug(8, "Using root configuration for main domain.");
+        }
+        
         $domain_conf_cache{$domain_name} = $root_conf;
       }
     }
