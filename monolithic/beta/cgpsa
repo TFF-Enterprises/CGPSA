@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1b2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1b3
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -353,17 +353,16 @@ sub mainLoop
         
       if ($command =~ /INTF/i) 
       {
-        # CGPro wants to know our interface version (it's 2). We don't
-        # really care what CGPro's interface version is, since all we
-        # do is DISCARD or OK messages. Before we tell it so, we check
-        # for the CLI.
+        # CGPro wants to know our interface version (it's 2, because 
+        # we use ADDHEADER). After we tell it so, we check for 
+        # availability of the CGP CLI with respect to our 
+        # configuration (assuming we haven't already). 
+        printResult("INTF 2");      
         if (!$cli_checked)
         {
           checkCLI();
           $cli_checked = 1;
-        }      
-        
-        printResult("INTF 2");      
+        }              
       }
       elsif ($command =~ /FILE/i) 
       { 
@@ -449,8 +448,7 @@ sub checkCLI
       debug(1, "Checking for CommuniGate Pro CLI Access");
       
       my $attempts = 0;
-      my $cli;
-      undef $cli;
+      my $cli = undef;
       
       while (!$cli)
       {
@@ -1065,8 +1063,13 @@ sub process_file
     push(@msglines, $line);
   }
 
-  $cli->Logout();
-  undef $cli;
+  # close the CLI, if necessary, and the queue file
+  
+  if ($cli)
+  {
+    $cli->Logout();
+    undef $cli;
+  }
   close(MSGFILE);
   
   # Now determine our course of action
