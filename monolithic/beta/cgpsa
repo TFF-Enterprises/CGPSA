@@ -85,7 +85,10 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 # domain name, including a leading "/".
 
 our $domain_prefix = $cgp_base."Domains/";
-our $domain_config_suffix = "/".$domain_config_directory."cgpsa.conf";
+our $domain_config_suffix = "/".$domain_config_directory."cgpsa.domainconf";
+# for compatibility with CGPSA 1.3 domain prefs; will disappear in final 1.4
+our $domain_config_compat_suffix = 
+    "/".$domain_config_directory."cgpsa.conf";
 
 # The path to append to a home directory to get the SpamAssassin preference
 # file, in components.
@@ -2050,16 +2053,21 @@ sub loadDomainConfig
   our %domain_conf_cache;
   our $root_conf;
   
-  if ($domain_name eq "")
-  {
-    $domain_conf_cache{""} = $root_conf;
-  }
-  elsif (!(exists $domain_conf_cache{$domain_name}))
+  if (!(exists $domain_conf_cache{$domain_name}))
   {
     if ($root_conf->{allow_domain_cgpsa_conf})
     {
-      debug(8, "Attempting to load domain configuration for ".$domain_name);
-    
+      if ($domain_name ne "")
+      {
+        debug(8, "Attempting to load domain configuration for ".
+                 $domain_name);
+      }
+      else
+      { 
+        debug(8, "Attempting to load domain configuration for ".
+                 "main domain.");
+      }
+      
       # initialize it to the root configuration
   
       foreach my $setting (keys %root_conf_hash)
@@ -2070,6 +2078,21 @@ sub loadDomainConfig
       readConfigFile
         (\%conf, $domain_prefix.$domain_name.$domain_config_suffix);
 
+      # for backward compatibility with 1.3 domain preferences, will
+      # disappear in final 1.4
+      
+      if ($conf{no_configuration})
+      {
+        %conf = ();
+        foreach my $setting (keys %root_conf_hash)
+        {
+          $conf{$setting} = $root_conf_hash{$setting};
+        }
+        readConfigFile
+          (\%conf, 
+           $domain_prefix.$domain_name.$domain_config_compat_suffix);
+      }
+      
       if (!$conf{no_configuration})
       {
         # we successfully loaded something, let's cache it
