@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.2</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.3</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -34,7 +34,7 @@ configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
-<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.2, released 27 March 2003.</p>
+<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.3, released 30 March 2003.</p>
 <p>There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
@@ -108,84 +108,105 @@ on your system. If you can't get it working, ask for help (as
 described below in <a href="#bugs">Bug Reports, Feature Requests and
 the Like</a>).</p>
 
-<p>Note that CGPSA has not been tested on Windows - not even a little
-bit. I have no idea if it will work, or how these steps will have to
-be changed in order to install it on Windows. If anybody tries -
-especially if anybody succeeds - please let me know what happens and
-how you installed it, so I can incorporate that information to a
-future version of this documentation.</p>
+<p>As of Version 1.0.3, CGPSA is known to work on Windows 2000 with
+ActiveState Perl 5.6.1. It is likely that it will work on other Win32
+operating systems as well. Throughout the following steps, there are
+special instructions for Win32 systems.</p>
 
 <ol>
 
-<li>Install SpamAssassin on your system. The way to do this is
-platform dependent - on FreeBSD, for example, you might use the
-FreeBSD Ports system. Also install any auxiliary programs you want
-SpamAssassin to use, such as Razor and DCC. <a
-href="http://www.cpan.org/">Perl</a> is a prerequisite for
-SpamAssassin.<br/><br/></li>
+<li>Install SpamAssassin on your system. The way to do this is platform
+dependent - on FreeBSD, for example, you might use the FreeBSD Ports
+system. Also install any auxiliary programs you want SpamAssassin to
+use, such as Razor and DCC. <a href="http://www.cpan.org/">Perl</a> is a
+prerequisite for SpamAssassin. Instructions for installing SpamAssassin
+on Win32 operating systems are available <a
+href="http://www.openhandhome.com/howtosa250.html">here</a>. You must
+add <code>RES_NAMESERVERS</code> to your system environment variables on
+Win32, to enable DNS lookups under Perl.</li>
 
 <li>Verify that the path in the first line of the <code>cgpsa</code>
 script points to the Perl executable on your system. If you have Perl
 in a different location (such as <code>/usr/local/bin/perl</code> or
-<code>/opt/bin/perl</code>), change the line accordingly.<br/><br/></li>
+<code>/opt/bin/perl</code>), change the line accordingly. On Win32, this step is not required.<br/><br/></li>
 
 <li>Verify that the <code>$cgp_base</code> variable (listed under
 "Customizable Variables" near the top of the <code>cgpsa</code>
 script) contains the correct path to your CommuniGate Pro Base
 Directory (hereafter referred to as "CommuniGate directory"). The
-default path is <code>/var/CommuniGate</code> on most systems.<br/><br/></li>
+default path is <code>/var/CommuniGate</code> on most systems. On Win32, specify the location with a drive letter, using forward slashes (not backslashes) as separators: for example, <code>C:/CommuniGate Files/</code> (the default base directory on Win32).<br/><br/></li>
 
 <li>Install the <code>cgpsa</code> script inside your CommuniGate
 directory, and make sure it is executable. You can create a new
-subdirectory for it, or just put it at the top level; it doesn't
-really matter where it is, but make sure you know the full path to it
+subdirectory for it, or just put it at the top level; it doesn't really
+matter where it is, but make sure you know the full path to it
 (<code>/var/CommuniGate/cgpsa</code>, if it is at the top level of a
-default CommuniGate directory) - you'll need the path
+default CommuniGate directory on UNIX) - you'll need the path
 later.<br/><br/></li>
 
 <li>Install the <code>cgpsa.conf</code> configuration file into the
-<code>Settings</code> subdirectory of your CommuniGate
-directory. Modify any of the settings you want to change - they are
-all well documented in the configuration file itself.<br/><br/></li>
+<code>Settings</code> subdirectory of your CommuniGate directory. Modify
+any of the settings you want to change - they are all well documented in
+the configuration file itself.<br/><br/></li>
 
-<li>If you are running CGPSA in its full-featured mode with CLI usage enabled, you must install the <a href="http://www.stalker.com/CGPerl/">CommuniGate Pro CLI Perl Module</a>, <code>CLI.pm</code>. A version of <code>CLI.pm</code> is included with the CGPSA distribution. You can copy it to any of your system's Perl @INC directories, or just place it in the directory where you've installed <code>cgpsa</code>. <code>CLI.pm</code> requires the <a href="http://search.cpan.org/search?module=Digest::MD5">Digest::MD5</a> Perl module; if you do not have it installed on your system, download and install it (or use the <a href="http://www.cpan.org/">CPAN</a> module to install it). If you have installed other scripts on your system that require the CommuniGate Pro CLI, you may already have installed <code>CLI.pm</code>; you do not need to reinstall it for CGPSA, though you should ensure that it's a recent version. If you are running in headers-only mode, or in full-featured mode without the CLI, you need not install <code>CLI.pm</code> for CGPSA to function.<br/><br/></li>
+<li>If you are running CGPSA in its full-featured mode with CLI usage
+enabled, you must install the <a
+href="http://www.stalker.com/CGPerl/">CommuniGate Pro CLI Perl
+Module</a>, <code>CLI.pm</code>. A version of <code>CLI.pm</code> is
+included with the CGPSA distribution. You can copy it to any of your
+system's Perl @INC directories, or just place it in the directory where
+you've installed <code>cgpsa</code>. <code>CLI.pm</code> requires the <a
+href="http://search.cpan.org/search?module=Digest::MD5">Digest::MD5</a>
+Perl module; if you do not have it installed on your system, download
+and install it (or use the <a href="http://www.cpan.org/">CPAN</a>
+module to install it). If you have installed other scripts on your
+system that require the CommuniGate Pro CLI, you may already have
+installed <code>CLI.pm</code>; you do not need to reinstall it for
+CGPSA, though you should ensure that it's a recent version. If you are
+running in headers-only mode, or in full-featured mode without the CLI,
+you need not install <code>CLI.pm</code> for CGPSA to
+function.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must create a CommuniGate Pro account with PWD access (as
 described in the configuration file). Use the username and password
-specified in your <code>cgpsa.conf</code>. Enable a sufficient number
-of PWD connections for the number of enqueuer threads used by your
-server. See the configuration file for details. If you are running in headers-only mode, or in full-featured mode without the CLI, you need not create an account for PWD access.<br/><br/></li>
+specified in your <code>cgpsa.conf</code>. Enable a sufficient number of
+PWD connections for the number of enqueuer threads used by your server.
+See the configuration file for details. If you are running in
+headers-only mode, or in full-featured mode without the CLI, you need
+not create an account for PWD access.<br/><br/></li>
 
 <li>Create the "default home directory", whose path is set in the
-configuration file (<code>cgpsa.conf</code>). This is where the
-default SpamAssassin preferences and state files will be stored - that
-is, those that are used in the absence of individual user
+configuration file (<code>cgpsa.conf</code>). This is where the default
+SpamAssassin preferences and state files will be stored - that is, those
+that are used in the absence of individual user
 preferences.<br/><br/></li>
 
 <li>Create a SpamAssassin configuration in the default home directory,
-if necessary. If the CommuniGate Pro server is the only software on
-your system using SpamAssassin, you can just use SpamAssassin's
+if necessary. If the CommuniGate Pro server is the only software on your
+system using SpamAssassin, you can just use SpamAssassin's
 <code>local.cf</code> file (usually in
 <code>/etc/mail/spamassassin/</code>) to set up SpamAssassin's
-preferences. Otherwise, create a <code>.spamassassin</code>
-subdirectory inside the default home directory, containing a
-<code>user_prefs</code> file with the SpamAssassin preferences to be
-used by CGPSA.<br/><br/></li>
+preferences. Otherwise, create a <code>.spamassassin</code> subdirectory
+inside the default home directory, containing a <code>user_prefs</code>
+file with the SpamAssassin preferences to be used by
+CGPSA.<br/><br/></li>
 
 <li>In the CommuniGate Pro web administration interface, go to the
-"Helper Settings" page (under "Settings/General"). In an empty
-"Content Filtering" section, enter a name for the filter (such as
-"CGPSA"), and the full path to the filter (see step 4). Set the Log
-level to "Low Level" (for now). Leave "Time-out" and "Auto-Restart"
-set to "Disabled" unless you experience problems with the filter (be
-optimistic for the time being). Finally, enable the filter and save
-your changes.<br/><br/></li>
+"Helper Settings" page (under "Settings/General"). In an empty "Content
+Filtering" section, enter a name for the filter (such as "CGPSA"), and
+the full path to the filter (see step 4). On Win32, enter
+<code>perl</code> followed by the full path to the filter (example:
+<code>perl C:/CommuniGate Files/cgpsa</code>. Set the Log level to "Low
+Level" or "All Info" (for now). Leave "Time-out" and "Auto-Restart" set
+to "Disabled" unless you experience problems with the filter (be
+optimistic for the time being). Finally, enable the filter and save your
+changes.<br/><br/></li>
 
 <li>Examine the CommuniGate Pro log for the current day, and search
 for the string you entered as the filter's name in the previous
 step. You should see a line that reads similar to the following: "*
-TFF Enterprises CGPSA Filter 1.0.1 Ready". If you do not see this line,
+TFF Enterprises CGPSA Filter 1.0.3 Ready". If you do not see this line,
 wait a few seconds and look again. If you still do not see it after a
 minute or so, something went wrong and there will likely be an error
 message in the log. If you can make sense of it and fix the problem,
@@ -265,6 +286,18 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt>1.0.3 - 30 March 2003</dt>
+<dd>
+<ul>
+<li>Added the "parallel_requests" setting, which defaults to "false". This addresses problems on Win32, and potentially on other platforms as well, with the mechanism currently used to process multiple emails in parallel.</li>
+<li>Fixed a problem where the "headers_only" setting was not read properly.</li>
+<li>Fixed a problem where, if there was no default SpamAssassin preferences file and user preferences were not being used, no mail would be scanned.</li>
+<li>Changed the default settings for "use_user_prefs", "require_user_prefs", and "use_user_state" to "no".</li>
+<li>Removed OS name and Perl version from X-TFF-CGPSA-Version header.</li>
+<li>Added clarification that the default home directory in the configuration
+file should not be quoted.</li>
+</ul>
+</dd>
 <dt>1.0.2 - 27 March 2003</dt>
 <dd>
 <ul>
@@ -316,7 +349,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-27 March 2003<br />
+30 March 2003<br />
 </address>
 </body>
 </html>

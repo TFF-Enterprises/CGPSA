@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.2
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.0.3
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -79,13 +79,13 @@ use Mail::SpamAssassin::NoMailAudit;
 
 # Version string for this filter.
 
-our $VERSION = "1.0.2";
+our $VERSION = "1.0.3";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
 
 our $VERSIONHEADERNAME = "X-TFF-CGPSA-Version";
-our $VERSIONHEADERTEXT = "$VERSION (".hostname()."/".$^O."/perl".$].")";
+our $VERSIONHEADERTEXT = "$VERSION (".hostname().")";
 
 # Set standard error and standard output to autoflush.
 
@@ -133,7 +133,7 @@ our $spamassassin = Mail::SpamAssassin->new
     local_tests_only => !($conf->{do_network_tests}),
     stop_at_threshold => $conf->{stop_at_threshold},
     home_dir_for_helpers => $conf->{helper_state_dir},
-    user_state_dir => $conf->{system_prefs_dir},
+    user_state_dir => $conf->{default_home_dir},
     debug => 0,
     paranoid => 0
    });
@@ -165,7 +165,8 @@ if ($conf->{use_auto_whitelist})
 # If we're only using the default prefs, load them now to save time 
 # later...
 
-if ($conf->{headers_only} || !$conf->{use_user_prefs})
+if (!$conf->{use_user_prefs} && 
+    -e "$conf->{default_home_dir}/.spamassassin/user_prefs")
 {
   $spamassassin->read_scoreonly_config
     ($conf->{default_home_dir}."/.spamassassin/user_prefs");
@@ -183,7 +184,6 @@ $/ = "\n";      # argh, Razor resets this!  Bad Razor! (from spamd.raw)
 unlink <$ENV{'HOME'}/.spamassassin/*>,<$ENV{'HOME'}/*>;
 rmdir "$ENV{'HOME'}/.spamassassin";
 rmdir $ENV{'HOME'};
-system "/bin/rm -Rf /tmp/spamassassin-$$";
 delete $ENV{'HOME'};
 
 # Clean up any old lock file that might exist.
@@ -196,9 +196,21 @@ print("* TFF Enterprises CGPSA Filter $VERSION Ready\n");
 
 my $request = <STDIN>;
 our $seqnum; # global, so it can be printed in debug lines
+my %pids, my $pid;
 
 while ($request) 
 {
+  # Give child processes a chance to be cleaned up...
+
+  foreach $pid (keys %pids)
+  {
+    if (waitpid($pid, &WNOHANG) < -1)
+    {
+      # child $pid has terminated
+      delete $pids{$pid};
+    }
+  }
+  
   if ($request =~ /([0-9]+)\s*([A-Za-z]+)\s*(.*)/si) 
   {
     $seqnum = $1;
@@ -217,18 +229,31 @@ while ($request)
       # If we have no config file, we can't do anything useful...
       if ($conf->{no_configuration}) 
       {
-        printResult("FAILURE", "no configuration data found");
+        printResult("FAILURE No configuration file found.");
       }
       else 
       {
         # CGPro is giving us a file to examine
-        my $id = fork();
-        if ($id == 0) 
-        {
-          &process_file($parameter);
+        # Fork off a process, if we're running with parallel requests
+        $pid = 0;
+        if ($conf->{parallel_requests})
+        {         
+          $pid = fork();
         }
-        waitpid(-1, &WNOHANG);
-        waitpid(-1, &WNOHANG);
+        
+        if ($pid == 0) 
+        {
+          process_file($parameter);
+          if ($conf->{parallel_requests})
+          {
+            # We're a finished child process, so we must...
+            exit();
+          }
+        }
+        else 
+        {
+          $pids{$pid} = 1;
+        }
       } 
     }
     else 
@@ -305,8 +330,7 @@ sub getEffectiveHomeDirectory
   {
     # $account_dir is already set to the effective home directory
   }
-  elsif (!$conf->{require_user_prefs} &&
-         (-e "$conf->{default_home_dir}/.spamassassin/user_prefs"))
+  elsif (!$conf->{require_user_prefs})
   {
     # the default home directory is the effective home directory
     $account_dir = $conf->{default_home_dir};
@@ -457,8 +481,8 @@ sub checkMessage
 
 
 # Process A CommuniGate Pro Queue File
-# This subroutine _must_ be called after a fork(), because it
-# exits when a result is generated.
+# This subroutine takes a filename and generates output appropriate
+# for the CommuniGate Pro EXternal Filter Interface.
 
 sub process_file 
 {
@@ -484,8 +508,8 @@ sub process_file
      
     if (!$cli) 
     {
-      printResult("FAILURE", "Could not connect to CLI");
-      exit();
+      printResult("FAILURE Could not connect to CLI.");
+      return;
     }
   }
   
@@ -501,7 +525,7 @@ sub process_file
   {
     debug(1, "Queue file $filename doesn't exist");
     printResult("OK");
-    exit();
+    return;
   }
   
   $cgp_header = 1;
@@ -680,19 +704,22 @@ sub process_file
     if ($line =~ /^$conf->{loop_prevention_header}.*/) 
     {
       # we've already processed this message, so let's not
-      # waste time processing it again
+      # waste time processing it again - be sure to clean up
+      # by closing thre CLI and the queue file
       
       debug(5, "Previously-scanned message detected.");
       if ($cli)
       {
         $cli->Logout();
       }
+      close(MSGFILE);
       printResult("OK");
-      exit();
+      return;
     }
     
     push(@msglines, $line);
   }
+
   close(MSGFILE);
   
   # Now determine our course of action
@@ -761,9 +788,6 @@ sub process_file
   {
     $cli->Logout;
   }
-  
-  # And since this was fork()'d, we should...
-  exit();
 }
 
 
@@ -785,6 +809,7 @@ sub readConfigFile
   $conf->{cgp_username} = "username";
   $conf->{cgp_password} = "password";
   $conf->{cgp_hostname} = "localhost";
+  $conf->{parallel_requests} = 0;
   $conf->{headers_only} = 0;
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;
@@ -793,9 +818,9 @@ sub readConfigFile
   $conf->{debug} = 1;
   $conf->{debug_level} = 9;
   $conf->{default_home_dir} = $cgp_base.$config_directory."SpamAssassin";
-  $conf->{use_user_prefs} = 1;
-  $conf->{require_user_prefs} = 1;
-  $conf->{use_user_state} = 1;
+  $conf->{use_user_prefs} = 0;
+  $conf->{require_user_prefs} = 0;
+  $conf->{use_user_state} = 0;
   $conf->{use_auto_whitelist} = 1;
   $conf->{do_network_tests} = 1;
   $conf->{stop_at_threshold} = 0;
@@ -818,7 +843,11 @@ sub readConfigFile
     {
       $conf->{cgp_password} = $1;
     }
-    elsif ($line =~ /^add[-_]headers[-_]only[\s\=]+(\S+)$/)
+    elsif ($line =~ /^parallel[-_]requests[\s\=]+(\S+)$/)
+    {
+      $conf->{parallel_requests} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^headers[-_]only[\s\=]+(\S+)$/)
     {
       $conf->{headers_only} = evaluateBoolean($1);
     }
@@ -900,6 +929,7 @@ sub readConfigFile
     $conf->{use_cli} = 0;
     $conf->{use_user_prefs} = 0;
     $conf->{require_user_prefs} = 0;
+    $conf->{use_user_state} = 0;
   }
 }
 
@@ -927,8 +957,11 @@ sub evaluateBoolean
 
 sub lockStandardOutput
 {
-  sysopen(FH, $lock_pathname, O_WRONLY | O_CREAT);
-  flock(FH, LOCK_EX);
+  if ($conf->{parallel_requests})
+  {
+    sysopen(FH, $lock_pathname, O_WRONLY | O_CREAT);
+    flock(FH, LOCK_EX);
+  }
 }
 
 # Unlock standard output (using a lock file). Must be called after 
@@ -936,7 +969,10 @@ sub lockStandardOutput
 
 sub unlockStandardOutput
 {
-  close(FH);
+  if ($conf->{parallel_requests})
+  {
+    close(FH);
+  }
 }
 
 
