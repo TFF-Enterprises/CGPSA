@@ -176,6 +176,12 @@ See the configuration file for details. If you are running in
 headers-only mode, or in full-featured mode without the CLI, you need
 not create an account for PWD access.<br/><br/></li>
 
+<li>If you are running CGPSA in its full-featured mode with CLI usage
+enabled, and your CommuniGate Pro setup has IP addresses specifically assigned to domains, make sure that either you have specified "127.0.0.1"
+as an address associated with one of your domains or you have changed the
+"cgp_hostname" setting in <code>cgpsa.conf</code> to refer to a hostname
+or IP address on which the CommuniGate server is listening.</li>
+
 <li>Create the "default home directory", whose path is set in the
 configuration file (<code>cgpsa.conf</code>). This is where the default
 SpamAssassin preferences and state files will be stored - that is, those
@@ -287,6 +293,14 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt>1.0.6 - Unreleased</dt>
+<dd>
+<ul>
+<li>Fixed a race condition where CGPSA would check for the ability
+to connect to the CLI before the CommuniGate server was ready to accept
+connections to the PWD port.</li>
+</ul>
+</dd>
 <dt>1.0.5 - 14 April 2003</dt>
 <dd>
 <ul>
@@ -375,7 +389,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-14 April 2003<br />
+18 April 2003<br />
 </address>
 </body>
 </html>
