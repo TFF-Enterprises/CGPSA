@@ -41,6 +41,9 @@
 # Note that you _must_ properly set the "$cgp_base" variable below for this
 # filter to work at all.
 
+# CGPSA requires Perl 5.6.0 or higher to run.
+require 5.6.0;
+
 #
 # Customizable Variables
 # Many other customizations are possible, but they are all carried out
