@@ -1753,11 +1753,9 @@ sub loadDomainConfig
     
     # initialize it to the root configuration
   
-    print("* Defaults:\n");  
     foreach my $setting (keys %root_conf_hash)
     {
       $conf{$setting} = $root_conf_hash{$setting};
-      print("* $setting = ".$root_conf_hash{$setting}."\n");
     }
     
     readConfigFile
@@ -1797,7 +1795,7 @@ sub loadUserConfig
   our %user_conf_cache;
   our $root_conf;
   
-  if ($user_name =~ /^\S@(\S)$/)
+  if ($user_name =~ /^\S*@(\S*)$/)
   {
     $domain_name = $1;
   }
@@ -1812,12 +1810,11 @@ sub loadUserConfig
   if (!(exists $user_conf_cache{$user_name}))
   {
     debug(9, "Attempting to load user configuration for ".$user_name);
-    print("* Defaults:\n");
+
     # initialize to values of domain configuration
     foreach my $setting (keys %{$domain_conf})
     {
       $conf{$setting} = $domain_conf->{$setting};
-      print("* $setting = ".$domain_conf->{$setting}."\n");
     }
 
     readConfigFile(\%conf, $settings_directory.our $user_config_filename);
