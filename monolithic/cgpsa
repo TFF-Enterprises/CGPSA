@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1";
+our $VERSION = "1.1.1a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -657,12 +657,12 @@ sub checkMessageAddHeader
       if ($status->is_spam() || $spamassassin->{conf}->{always_add_headers})
       {
         # Always add headers to spam, but only if requested for non-spam.
-        $newheaders .= "X-Spam-Status: ".$status->_build_status_line."\n";
+        $newheaders .= "X-Spam-Status: ".$status->_build_status_line."\e";
         if ($spamassassin->{conf}->{spam_level_stars} == 1)
         {
           $newheaders .= "X-Spam-Level: ".
                          $spamassassin->{conf}->{spam_level_char} x 
-                         int($status->{hits})."\n";
+                         int($status->{hits})."\e";
         }
       }
       
@@ -672,7 +672,9 @@ sub checkMessageAddHeader
         my $spam_report = $status->get_report();
         $spam_report =~ s/^\s*\n//gm; # remove empty lines
         $spam_report =~ s/^\s*/  /gm; # each line starts with whitespace
-        $newheaders .= "X-Spam-Report: ".$spam_report."\n";
+        $spam_report =~ s/\n/\e/g;    # replace \n's with \e's 
+        
+        $newheaders .= "X-Spam-Report: ".$spam_report."\e";
       }
         
       # add any test-specific markup headers (for tests like Pyzor)
@@ -680,17 +682,18 @@ sub checkMessageAddHeader
       {
         $newheaders .= 
           $test_header_name.": ".
-          $status->{headers_to_add}->{$test_header_name}."\n";
+          $status->{headers_to_add}->{$test_header_name}."\e";
       }
       
       # always add CGPSA Version and SpamAssassin Version headers
       $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
                      Mail::SpamAssassin::Version().
-                     " ($Mail::SpamAssassin::SUB_VERSION)\n";
+                     " ($Mail::SpamAssassin::SUB_VERSION)\e";
       $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT;
 
       # remove any double carriage returns...
       $newheaders =~ s/\n\n/\n/g;
+      $newheaders =~ s/\e\e/\e/g;
       
       $status->finish();
       $mail->finish();
@@ -769,6 +772,11 @@ sub checkMessage
     
   eval 
   {
+    # Remove any existing SpamAssassin markup from the message...
+    
+    $mail->replace_original_message
+      ($spamassassin->remove_spamassassin_markup($mail));
+
     if (my $status = $spamassassin->check($mail))
     {
       $mail->replace_original_message([@$msg_ptr]);
@@ -1476,6 +1484,7 @@ sub to_cgp_string
 {
   my $orig_string = shift;
   $orig_string =~ s/\\/\\\\/g;
+  $orig_string =~ s/\e/\\e/g;
   $orig_string =~ s/\r/\\r/g;
   $orig_string =~ s/\n/\\n/g;
   $orig_string =~ s/\t/\\t/g;
