@@ -34,11 +34,12 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
 <p>The most current (release) version of CGPSA can always be downloaded
-from <a
-href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
+from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
 tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
-<a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_1.tgz">1.1</a>,
-released 27 July 2003. There is currently no beta release available.</p>
+<a
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a>,
+released 11 September 2003. There is currently no beta release
+available.</p>
 
 <h2>Documentation</h2>
 
@@ -112,7 +113,8 @@ messages to remote servers.</p>
 <li>Perl version 5.6.1 or higher</li>
 <li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.5 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
-choose for CGPSA (described in the installation steps below).</li>
+choose for CGPSA and SpamAssassin (described in the installation steps 
+below and in SpamAssassin's documentation).</li>
 </ol>
 
 <hr/>
@@ -352,6 +354,30 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a> - 11 September 2003</dt>
+<dd>
+<p>Changes</p>
+<li>Perl 5.6.0 or higher is now required to run CGPSA (this was
+unintentionally the case before, but CGPSA will die with a much more 
+intuitive message now)</li>
+<li>SpamAssassin 2.5 or higher is now required to run CGPSA.</li>
+<li>The "max_requests" configuration option, which causes CGPSA to kill
+itself after processing a certain number of requests (to help combat memory
+leaks on systems where "parallel_requests" can't be used), has been
+added.</li>
+<li>Spurious X-Spam-* headers (that is, those added by SpamAssassin
+running on other servers) are now removed from messages when running in
+full-featured mode.</li>
+<li>Headers-only mode has been made compatible with SpamAssassin 2.60 series
+releases.</li>
+<li>"\e" has replaced "\n" as the line separator in headers constructed by
+CGPSA.</li>
+<li>
+</ul>
+<p>Known Issues</p>
+<ul>
+<li>Same as for Version 1.1.</li>
+</ul>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_1.tgz">1.1</a> - 27 July 2003</dt>
 <dd>
 <p>Changes</p>
@@ -549,7 +575,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-27 July 2003<br />
+11 September 2003<br />
 </address>
 </body>
 </html>
