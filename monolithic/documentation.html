@@ -226,11 +226,11 @@ Filtering" section, enter a name for the filter (such as "CGPSA"). For
 the Program Path on UNIX, enter the full path to the filter (example:
 <code>/var/CommuniGate/cgpsa</code> - see step 4). For the Program Path
 on Win32, enter <code>perl</code> followed by the full path to the
-filter (example: <code>perl C:/CommuniGate Files/cgpsa</code>. Set the
-Log level to "Low Level" or "All Info" (for now). Leave "Time-out" and
-"Auto-Restart" set to "Disabled" unless you experience problems with the
-filter (be optimistic for the time being). Finally, enable the filter
-and save your changes.<br/><br/></li>
+filter in quotes(example: <code>perl "C:\CommuniGate
+Files\cgpsa"</code>. Set the Log level to "Low Level" or "All Info" (for
+now). Leave "Time-out" and "Auto-Restart" set to "Disabled" unless you
+experience problems with the filter (be optimistic for the time being).
+Finally, enable the filter and save your changes.<br/><br/></li>
 
 <li>Examine the CommuniGate Pro log for the current day, and search
 for the string you entered as the filter's name in the previous
@@ -359,6 +359,12 @@ in the same directory as your <code>cgpsa.conf</code> file).</p>
 <dd>
 <p>Changes</p>
 <ul>
+<li>Added logic to ensure that CGPSA never tries to pass CommuniGate
+additional headers longer than 4096 characters in headers-only mode.</li>
+<li>Fixed the reading of numeric settings (such as "max_requests" and 
+"debug_level") from the configuration file.</li>
+<li>Fixed a bug where a data structure that tracked child processes could
+potentially grow without bound.</li>
 <li>Added a configuration option to turn on SpamAssassin's internal 
 debugging (it is off by default).</li>
 </ul>
@@ -623,7 +629,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-14 November 2003<br />
+2 December 2003<br />
 </address>
 </body>
 </html>
