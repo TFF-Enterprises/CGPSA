@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f4
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4f5c1
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4f4";
+our $VERSION = "1.4f5c1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -930,7 +930,7 @@ sub checkMessageAddHeader
       }
       my $msg_score = sprintf("%.1f", $status->get_hits());
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits());
-      ${$score_ptr} = $status->get_hits;
+      ${$score_ptr} = $status->get_hits();
       
       debug(5, "$was_it_spam ($msg_score/$msg_threshold) in ".
                sprintf("%.1f", getTime() - $start)." seconds");
@@ -1780,6 +1780,10 @@ sub process_file
     # if the message score exceeds the threshold and we're throwing out
     # messages, we discard the message... otherwise we add headers
     
+    debug(9, "root_conf->{auto_discard} = ".$root_conf->{auto_discard}.
+             ", root_conf->{discard_threshold} = ".
+             $root_conf->{discard_threshold});
+             
     if ($root_conf->{auto_discard} && 
         $msg_score >= $root_conf->{discard_threshold})
     {
@@ -1856,6 +1860,11 @@ sub process_file
                        $domain_conf->{default_home_dir}, 
                        \$is_spam, \$msg_score);
         
+        debug(9, "domain_conf->{auto_discard} = ".
+              $domain_conf->{auto_discard}.
+              ", domain_conf->{discard_threshold} = ".
+              $domain_conf->{discard_threshold});
+
         if ($domain_conf->{auto_discard} &&
             ($msg_score >= $domain_conf->{discard_threshold}))
         {
@@ -1916,8 +1925,13 @@ sub process_file
                                     $domain_name, $account_name, 
                                     $account_dir, \$is_spam, \$msg_score);
                                     
-      if ($is_spam && $user_conf->{auto_discard} &&
-          $msg_score >= $user_conf->{discard_threshold})
+      debug(9, "user_conf->{auto_discard} = ".
+            $user_conf->{auto_discard}.
+            ", user_conf->{discard_threshold} = ".
+            $user_conf->{discard_threshold});
+
+      if ($user_conf->{auto_discard} &&
+          ($msg_score >= $user_conf->{discard_threshold}))
       {
         # it's spam and it's above the user's threshold, so we
         # don't submit it at all
