@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.5</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.0.6</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -34,7 +34,12 @@ configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
 <h3>Downloads</h3>
-<p>The most current (release) version of CGPSA can always be downloaded from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is 1.0.5, released 14 April 2003.</p>
+<p>The most current (release) version of CGPSA can always be downloaded
+from <a
+href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">http://www.
+tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
+<a href="http://www.tffenterprises.com/cgpsa/cgpsa-1_0_6.tgz">1.0.6</a>,
+released 5 May 2003.</p>
 <p>There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
@@ -293,16 +298,22 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - Unreleased</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
 <dd>
 <ul>
-<li>Added information to the log output about the paths to the SpamAssassin 
+<li>Added an option (turned on by default) to redirect SpamAssassin's
+error output to a file rather than to standard error. This solves a
+problem that would cause the filter to hang on certain operating
+systems (including Mac OS X).</li>
+<li>Added information to log output about the paths to the SpamAssassin 
 settings files being used; the path to the default settings file is output
 at filter startup time, and the paths to user settings files are output
 when those files are used.</li>
 <li>Fixed a race condition where CGPSA would check for the ability
 to connect to the CLI before the CommuniGate server was ready to accept
 connections to the PWD port.</li>
+<li>Fixed the entry for "default_home_dir" in the configuration file to
+accurately reflect its default value.</li>
 </ul>
 </dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_5.tgz">1.0.5</a> - 14 April 2003</dt>
@@ -393,7 +404,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-18 April 2003<br />
+5 May 2003<br />
 </address>
 </body>
 </html>
