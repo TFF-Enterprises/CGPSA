@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a2
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1.1a1";
+our $VERSION = "1.1.1a2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -293,6 +293,13 @@ sub loadPreferences
   
   $spamassassin->compile_now(0);
   $/ = "\n";      # argh, Razor resets this!  Bad Razor! (from spamd.raw)
+  
+  if ($Mail::SpamAssassin::VERSION < 2.5)
+  {
+    error_exit("CGPSA requires SpamAssassin version 2.5 or higher ".
+               "(installed SpamAssassin is version ".
+               $Mail::SpamAssassin::VERSION.")");
+  }
   
   print("* Using SpamAssassin Version ".Mail::SpamAssassin::Version().
         " ($Mail::SpamAssassin::SUB_VERSION)\n");
@@ -639,7 +646,6 @@ sub checkMessageAddHeader
       if ($status->is_spam()) 
       { 
         $was_it_spam = "Identified spam"; 
-        $newheaders = "X-Spam-Flag: YES\n";
       } 
       else 
       { 
@@ -654,35 +660,67 @@ sub checkMessageAddHeader
       # does it, and we respect all of SpamAssassin's preferences (because
       # it's a good thing to do, and prevents confusion). 
       
-      if ($status->is_spam() || $spamassassin->{conf}->{always_add_headers})
+      # For SpamAssassin 2.5x, this is very ugly and relies on things 
+      # internal to SpamAssassin
+      
+      if ($Mail::SpamAssassin::VERSION < 2.6)
       {
-        # Always add headers to spam, but only if requested for non-spam.
-        $newheaders .= "X-Spam-Status: ".$status->_build_status_line."\e";
-        if ($spamassassin->{conf}->{spam_level_stars} == 1)
+        if ($status->is_spam() || 
+            $spamassassin->{conf}->{always_add_headers})
         {
-          $newheaders .= "X-Spam-Level: ".
-                         $spamassassin->{conf}->{spam_level_char} x 
-                         int($status->{hits})."\e";
+          # Always add headers to spam, but only if requested for non-spam.
+          $newheaders = "X-Spam-Flag: YES\e";
+          $newheaders .= "X-Spam-Status: ".$status->_build_status_line."\e";
+          if ($spamassassin->{conf}->{spam_level_stars} == 1)
+          {
+            $newheaders .= "X-Spam-Level: ".
+                           $spamassassin->{conf}->{spam_level_char} x 
+                           int($status->{hits})."\e";
+          }
+        }
+      
+        if ($status->is_spam || $spamassassin->{conf}->{always_add_report})
+        {
+          # Always add report to spam, but only if requested for non-spam.
+          my $spam_report = $status->get_report();
+          $spam_report =~ s/^\s*\n//gm; # remove empty lines
+          $spam_report =~ s/^\s*/  /gm; # each line starts with whitespace
+          $spam_report =~ s/\n/\e/g;    # replace \n's with \e's 
+        
+          $newheaders .= "X-Spam-Report: ".$spam_report."\e";
+        }
+        
+        # add any test-specific markup headers (for tests like Pyzor)
+        foreach my $test_header_name (keys %{$status->{headers_to_add}}) 
+        {
+          $newheaders .= 
+            $test_header_name.": ".
+            $status->{headers_to_add}->{$test_header_name}."\e";
         }
       }
-      
-      if ($status->is_spam || $spamassassin->{conf}->{always_add_report})
+      else # SpamAssassin 2.60 or higher
       {
-        # Always add report to spam, but only if requested for non-spam.
-        my $spam_report = $status->get_report();
-        $spam_report =~ s/^\s*\n//gm; # remove empty lines
-        $spam_report =~ s/^\s*/  /gm; # each line starts with whitespace
-        $spam_report =~ s/\n/\e/g;    # replace \n's with \e's 
-        
-        $newheaders .= "X-Spam-Report: ".$spam_report."\e";
-      }
-        
-      # add any test-specific markup headers (for tests like Pyzor)
-      foreach my $test_header_name (keys %{$status->{headers_to_add}}) 
-      {
-        $newheaders .= 
-          $test_header_name.": ".
-          $status->{headers_to_add}->{$test_header_name}."\e";
+        $status->rewrite_headers();
+        $newheaders = "";
+        if ($status->is_spam())
+        {
+          foreach my $header (keys %{$status->{conf}->{headers_spam}})
+          {
+            $newheaders .= "X-Spam-$header: ".
+                           $status->{msg}->get_header("X-Spam-$header").
+                           "\e";
+          }
+        }
+        else
+        {
+          foreach my $header (keys %{$status->{conf}->{headers_ham}})
+          {
+            $newheaders .= "X-Spam-$header: ".
+                           $status->{msg}->get_header("X-Spam-$header").
+                           "\e";
+          }
+        }
+        $newheaders =~ s/\n/\e/g; # replace \n's with \e's
       }
       
       # always add CGPSA Version and SpamAssassin Version headers
@@ -777,14 +815,13 @@ sub checkMessage
       $mail->replace_original_message([@$msg_ptr]);
 
       # Remove any existing SpamAssassin headers from the message...
-      
-      $mail->delete_header("X-Spam-Status");
-      $mail->delete_header("X-Spam-Flag");
-      $mail->delete_header("X-Spam-Checker-Version");
-      $mail->delete_header("X-Spam-Prev-Content-Type");
-      $mail->delete_header("X-Spam-Prev-Content-Transfer-Encoding");
-      $mail->delete_header("X-Spam-Report");
-      $mail->delete_header("X-Spam-Level");
+      foreach my $header_name (keys %{$mail->{headers}}) 
+      {
+        if ($header_name =~ /X-Spam-.*/)
+        {
+          delete $mail->{headers}->{$header_name};
+        }
+      }
     
       $status->rewrite_mail;
   
