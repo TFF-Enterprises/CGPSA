@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3.1c1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.3.1
 # Copyright (C) 2002-2004 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -111,7 +111,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.3.1c1";
+our $VERSION = "1.3.1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1818,9 +1818,11 @@ sub loadRootConfig
   $root_conf->{sa_prefix} = "";
   $root_conf->{sa_default_rules_dir} = "";
   $root_conf->{sa_local_rules_dir} = "";
+  $root_conf->{allow_user_cgpsa_conf} = 1;
   $root_conf->{allow_user_prefs} = 1;
   $root_conf->{use_user_prefs} = 0;
   $root_conf->{require_user_prefs} = 0;
+  $root_conf->{allow_domain_cgpsa_conf} = 1;
   $root_conf->{use_domain_prefs} = 1;
   $root_conf->{allow_user_state} = 1;
   $root_conf->{use_user_state} = 0;
@@ -1885,7 +1887,7 @@ sub loadDomainConfig
   }
   elsif (!(exists $domain_conf_cache{$domain_name}))
   {
-    if ($root_conf->{allow_domain_prefs})
+    if ($root_conf->{allow_domain_cgpsa_conf})
     {
       debug(8, "Attempting to load domain configuration for ".$domain_name);
     
@@ -1956,7 +1958,7 @@ sub loadUserConfig
   
   if (!(exists $user_conf_cache{$user_name}))
   {
-    if ($domain_conf->{allow_user_prefs})
+    if ($domain_conf->{allow_user_cgpsa_conf})
     {
       debug(8, "Attempting to load user configuration for ".$user_name);
 
@@ -2107,6 +2109,10 @@ sub readConfigFile
     {
       $conf->{helper_state_dir} = $1;
     }
+    elsif ($line =~ /^allow[-_]user[-_]cgpsa[-_]conf[\s\=]+(\S+)$/)
+    {
+      $conf->{allow_user_cgpsa_conf} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^allow[-_]user[-_]prefs[\s\=]+(\S+)$/) 
     {
       $conf->{allow_user_prefs} = evaluateBoolean($1);
@@ -2118,6 +2124,10 @@ sub readConfigFile
     elsif ($line =~ /^require[-_]user[-_]prefs[\s\=]+(\S+)$/) 
     {
       $conf->{require_user_prefs} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^allow[-_]domain[-_]cgpsa[-_]conf[\s\=]+(\S+)$/)
+    {
+      $conf->{allow_domain_cgpsa_conf} = evaluateBoolean($1);
     }
     elsif ($line =~ /^use[-_]domain[-_]prefs[\s\=]+(\S+)$/) 
     {

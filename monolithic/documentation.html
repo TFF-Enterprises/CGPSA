@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.3.1</h1>
 <h2>Copyright &copy; 2002-2004 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -32,14 +32,14 @@ SpamAssassin's regular configuration files. For more information on
 SpamAssassin features and configuration, see the SpamAssassin <a
 href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 
-<h3>Downloads</h3>
+<h3>Downloads</h3> 
+
 <p>The most current (release) version of CGPSA can always be downloaded
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
-http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) 
-version is
-<a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3.tgz">1.3</a>,
-released 28 March 2004. There is no beta version available at this time.</p>
+http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
+version is <a
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_1.tgz">1.3.1</a>, 
+released 10 April 2004. There is no beta version available at this time.</p>
 
 <h2>Documentation</h2>
 
@@ -387,6 +387,34 @@ file).</p>
 
 <dl>
 
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_1.tgz">1.3.1</a> - 10 April 2004</dt>
+<dd>
+<p>Changes</p>
+<ul>
+
+<li>Added configuration options "allow_domain_cgpsa_conf" and
+"allow_user_cgpsa_conf" to disable the use of domain-level and
+user-level CGPSA configuration files, respectively. This should improve
+performance (negligably) and decrease the amount of log output
+(substantially) on systems where preference inheritance is not being
+used. By default, both domain- and user-level CGPSA configuration files
+are allowed.</li>
+
+</ul>
+<p>Bug Fixes</p>
+<ul>
+
+<li>Fixed an issue where auto-whitelist databases at the server or
+domain levels would not be used, but auto-whitelist databases at the
+user level would be. All auto-whitelist databases should now work.</li>
+
+<li>Modified and fixed many logging statements to remove some redundancy
+and unnecessary output from the logs.</li>
+
+<li>Fixed the logging output to properly reflect the score and threshold
+of spam discarded by CGPSA's auto-discard functionality.<br/><br/></li>
+
+</ul>
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3.tgz">1.3</a> - 28 March 2004</dt>
 <dd>
 <p>Major Changes</p>
@@ -890,7 +918,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-28 March 2004<br />
+10 April 2004<br />
 </address>
 </body>
 </html>
