@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1b3</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.1b4</h1>
 <h2>Copyright &copy; 2002-2003 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -44,8 +44,8 @@ tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release) version is
 released 18 June 2003.</p>
 
 <p>The current beta version of CGPSA is <a
-href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b3.tgz">1.1b3</a
->, released 26 June 2003. Information about new features of the 1.1 betas
+href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b4.tgz">1.1b4</a
+>, released 5 July 2003. Information about new features of the 1.1 betas
 can be found in the <a href="#history">revision history</a>.</p>
 
 <h2>Documentation</h2>
@@ -187,11 +187,14 @@ function.<br/><br/></li>
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must create a CommuniGate Pro account with PWD access (as
 described in the configuration file). Use the username and password
-specified in your <code>cgpsa.conf</code>. Enable a sufficient number of
-PWD connections for the number of enqueuer threads used by your server.
-See the configuration file for details. If you are running in
-headers-only mode, or in full-featured mode without the CLI, you need
-not create an account for PWD access.<br/><br/></li>
+specified in your <code>cgpsa.conf</code>. This user must have
+administrative access to all the domains for which you will be using
+CGPSA (the easiest way to do this is to give it access to modify all
+settings and privileges). Enable a sufficient number of PWD connections
+for the number of enqueuer threads used by your server. See the
+configuration file for details. If you are running in headers-only mode,
+or in full-featured mode without the CLI, you need not create an account
+for PWD access.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, and your CommuniGate Pro setup has IP addresses specifically assigned to domains, make sure that either you have specified "127.0.0.1"
@@ -230,7 +233,7 @@ and save your changes.<br/><br/></li>
 <li>Examine the CommuniGate Pro log for the current day, and search
 for the string you entered as the filter's name in the previous
 step. You should see a line that reads similar to the following: "*
-TFF Enterprises CGPSA Filter 1.0.5 Ready". If you do not see this line,
+TFF Enterprises CGPSA Filter (Version) Ready". If you do not see this line,
 wait a few seconds and look again. If you still do not see it after a
 minute or so, something went wrong and there will likely be an error
 message in the log. If you can make sense of it and fix the problem,
@@ -328,6 +331,13 @@ href="mailto:cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a>.</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b4.tgz">1.1b4</a> - 5 July 2003</dt>
+<dd>
+<p>Bug Fixes</p>
+<ul>
+<li>Fixed a problem that prevented the "require_user_prefs" option from working properly (it would run SpamAssassin for all accounts regardless of whether or not they had preferences).</li>
+</ul>
+</dd>
 <dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_1b3.tgz">1.1b3</a> - 26 June 2003</dt>
 <dd>
 <p>Bug Fixes</p>
@@ -544,7 +554,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-26 June 2003<br />
+5 July 2003<br />
 </address>
 </body>
 </html>

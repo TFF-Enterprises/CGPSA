@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1b3
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1b4
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1b3";
+our $VERSION = "1.1b4";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -535,11 +535,11 @@ sub submitMessage
 sub getEffectiveHomeDirectory
 {
   my ($cli_ptr, $account_name) = @_;
-  my $account_dir = undef;
   my $cli = ${$cli_ptr};
+  my $account_dir = $cli->GetAccountLocation($account_name);
   
   # see if account directory exists, and if so, what it is
-  if ($account_dir = $cli->GetAccountLocation($account_name)) 
+  if ($account_dir) 
   {
     if ($account_name =~ /.*@(.*)/) 
     {
@@ -551,6 +551,7 @@ sub getEffectiveHomeDirectory
     }
   }
 
+  # check to see if old preferences directory needs to be relocated
   if ($conf->{use_user_prefs} && $account_dir)
   {
     if (-e "$account_dir/.spamassassin")
@@ -572,12 +573,15 @@ sub getEffectiveHomeDirectory
       }
       unlockStandardOutput();
     }
-       
-    if (-e "$account_dir/account.web/.spamassassin/user_prefs")
-    {
-      # the user has preferences, so let's use them
-      $account_dir = "$account_dir/account.web";
-    }
+  }
+  
+  # ok, now we know the prefs - if they exist - are in the right place
+  # so we choose the prefs file to use
+  if ($conf->{use_user_prefs} && $account_dir &&  
+      (-e "$account_dir/account.web/.spamassassin/user_prefs"))
+  {
+    # the user has preferences, so let's use them
+    $account_dir = "$account_dir/account.web";
   }
   elsif (!$conf->{require_user_prefs})
   {
@@ -587,7 +591,7 @@ sub getEffectiveHomeDirectory
   else
   {
     # undef is the effective home directory
-    undef $account_dir;
+    $account_dir = undef;
   }
 
   return $account_dir;
