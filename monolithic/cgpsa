@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.1.1a4
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.2a1
 # Copyright (C) 2002-2003 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -82,7 +82,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.1.1a4";
+our $VERSION = "1.2a1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -205,6 +205,12 @@ sub loadPreferences
     print("Off\n");
   }
   
+  if ($conf->{max_requests} > 0)
+  {
+    print("* Max Requests: $conf->{max_requests} - Be sure Auto-Restart ". 
+          "is enabled in CGP Helper Settings.\n");
+  }
+  
   # Redirect standard error to a file, if option is set.
   
   if ($conf->{redirect_stderr})
@@ -325,6 +331,7 @@ sub mainLoop
   print("* TFF Enterprises CGPSA Filter $VERSION Ready\n");
   
   my $request = <STDIN>;
+  my $request_count = 0;
   our $hup_received;
   our %pids;
   my $pid;
@@ -374,6 +381,8 @@ sub mainLoop
       elsif ($command =~ /FILE/i) 
       { 
         # CGPro is giving us a file to examine
+        $request_count = $request_count + 1;
+        
         # Fork off a process, if we're running with parallel requests
         $pid = 0;
         if ($conf->{parallel_requests})
@@ -384,7 +393,6 @@ sub mainLoop
           rand(); 
           $pid = fork();
         }
-          
         if ($pid == 0) 
         {
           process_file($parameter);
@@ -392,6 +400,15 @@ sub mainLoop
           {
             # We're a finished child process, so we must...
             exit();
+          }
+          elsif (($conf->{max_requests} > 0) && 
+                 ($request_count >= $conf->{max_requests}))
+          {
+            lockStandardOutput();
+            print("* Handled maximum number of requests (".
+                  $conf->{max_requests}.", exiting.\n");
+            unlockStandardOutput();
+            last;
           }
         }
         else 
@@ -407,7 +424,6 @@ sub mainLoop
         unlockStandardOutput();
         last;
       }
-      
       else 
       {
         # CGPro gave us an unknown command
@@ -1230,6 +1246,7 @@ sub readConfigFile
   {
     $conf->{parallel_requests} = 1;
   }
+  $conf->{max_requests} = 0;
   $conf->{headers_only} = 0;
   $conf->{use_cli} = 1;
   $conf->{cgp_port} = 106;
@@ -1277,6 +1294,14 @@ sub readConfigFile
     elsif ($line =~ /^parallel[-_]requests[\s\=]+(\S+)$/)
     {
       $conf->{parallel_requests} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^max[-_]requests[\s\=]+([0-9])\s+$/) 
+    {
+      $conf->{max_requests} = scalar($1);
+      if ($conf->{max_requests} < 0)
+      {
+        $conf->{max_requests} = 0;
+      }
     }
     elsif ($line =~ /^headers[-_]only[\s\=]+(\S+)$/)
     {
@@ -1379,6 +1404,14 @@ sub readConfigFile
     $conf->{use_user_prefs} = 0;
     $conf->{require_user_prefs} = 0;
     $conf->{use_user_state} = 0;
+  }
+  
+  # If we're in "parallel requests" mode, change other settings
+  # appropriately.
+  
+  if ($conf->{parallel_requests})
+  {
+    $conf->{max_requests} = 0;
   }
 }
 
