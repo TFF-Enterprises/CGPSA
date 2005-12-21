@@ -371,7 +371,7 @@ sub initialize
   our $dbaddrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
   our $sqladdrlistfactory = undef;
   
-  if ($root_conf->{spamassassin_api_version} == 3)
+  eval
   {
     require Mail::SpamAssassin::SQLBasedAddrList;
     $sqladdrlistfactory = Mail::SpamAssassin::SQLBasedAddrList->new();
