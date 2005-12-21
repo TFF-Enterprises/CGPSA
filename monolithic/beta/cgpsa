@@ -375,7 +375,7 @@ sub initialize
   {
     require Mail::SpamAssassin::SQLBasedAddrList;
     $sqladdrlistfactory = Mail::SpamAssassin::SQLBasedAddrList->new();
-  }
+  };
     
   # If we're not using domain or user prefs, finish setting up 
   # SpamAssassin...
