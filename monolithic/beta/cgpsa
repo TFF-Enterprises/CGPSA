@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5a1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5b1
 # Copyright (C) 2002-2006 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.5a1";
+our $VERSION = "1.5b1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
