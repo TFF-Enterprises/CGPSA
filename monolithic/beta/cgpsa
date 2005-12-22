@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5b1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5b2
 # Copyright (C) 2002-2006 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -85,7 +85,7 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 # The domain suffix is the path to a domain configuration file starting 
 # after the domain name, including a leading "/".
 
-our $legacy_domain_prefix = $cgp_base."Domains/";
+our $legacy_domain_prefix = "Domains/";
 our $domain_config_filename = "cgpsa.domainconf";
 our $domain_config_suffix = 
     "/".$domain_config_directory.$domain_config_filename;
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.5b1";
+our $VERSION = "1.5b2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -265,6 +265,7 @@ sub initialize
     
     error_exit("Unable to read CGPSA configuration file, exiting.");
   }
+  loadDomainConfig("");
   print("* Configuration File Loaded\n");
   
   print("* Parallel Requests Mode: ");
@@ -1377,22 +1378,16 @@ sub checkMessage
     my $blank = 0;
     $rewritten_mail_scalar = "";
     
+    # add the new headers at the top, so as to not break DomainKeys
+    
+    $rewritten_mail_scalar .=
+      $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+    $rewritten_mail_scalar .= 
+      $root_conf->{loop_prevention_header} . ": Scan Failed\n\n";
+          
     foreach my $line (@$msg_ptr)
     {
-      if (($blank == 0) && ($line =~ /^\s+$/))
-      {
-        # a blank line, end of headers
-       
-        $rewritten_mail_scalar .=
-          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
-        $rewritten_mail_scalar .= 
-          $root_conf->{loop_prevention_header} . ": Scan Failed\n\n";
-        $blank = 1;
-      }
-      else
-      {
-        $rewritten_mail_scalar .= $line;
-      }
+      $rewritten_mail_scalar .= $line;
     }
 
     ${$is_spam_ptr} = 0;
@@ -1409,22 +1404,16 @@ sub checkMessage
     my @rewritten_lines = split (/^/m, $rewritten_mail_scalar);
     $rewritten_mail_scalar = "";
     
+    # add the new headers at the top, so as to not break DomainKeys
+    
+    $rewritten_mail_scalar .=
+      $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+    $rewritten_mail_scalar .= 
+      $root_conf->{loop_prevention_header} . ": Scanned\n\n";
+          
     foreach my $line (@rewritten_lines)
     {
-      if (($blank == 0) && ($line =~ /^\s+$/))
-      {
-        # a blank line, end of headers
-       
-        $rewritten_mail_scalar .=
-          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
-        $rewritten_mail_scalar .= 
-          $root_conf->{loop_prevention_header} . ": Scanned\n\n";
-        $blank = 1;
-      }
-      else
-      {
-        $rewritten_mail_scalar .= $line;
-      }
+      $rewritten_mail_scalar .= $line;
     }
   }
 
@@ -2436,6 +2425,10 @@ sub readConfigFile
     elsif ($line =~ /^require[-_]user[-_]prefs[\s\=]+(\S+)$/) 
     {
       $conf->{require_user_prefs} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^sql[-_]user[-_]prefs[\s\=]+(\S+)$/) 
+    {
+      $conf->{sql_user_prefs} = evaluateBoolean($1);
     }
     elsif ($line =~ /^allow[-_]domain[-_]cgpsa[-_]conf[\s\=]+(\S+)$/)
     {

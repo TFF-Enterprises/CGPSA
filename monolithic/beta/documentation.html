@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.5b1</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.5b2</h1>
 <h2>Copyright &copy; 2002-2006 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -41,7 +41,7 @@ version is <a
 href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a>, 
 released 2 January 2005.</p>
 
-<p>The current testing version of CGPSA is <a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b1.tgz">1.5b1</a>, released 21 December 2005.</p>
+<p>The current testing version of CGPSA is <a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b2.tgz">1.5b2</a>, released 21 December 2005.</p>
 
 <h2>Documentation</h2>
 
@@ -394,12 +394,32 @@ file).</p>
 
 <dl>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b1.tgz">1.5b1</a> - 21 December 2005</dt>
+<dt><a href="http://www.tffenterprises.com/cgpsa/beta/cgpsa-1_5b2.tgz">1.5b2</a> - 22 December 2005</dt>
+<dd>
+<p>Minor Changes</p>
+<ul>
+
+<li>Moved CGPSA-generated headers to the top of the header block, so as to be friendlier to DomainKeys.<br/><br/></li>
+
+</ul>
+<p>Bug Fixes</p>
+<ul>
+
+<li>Added actual reading of the "sql_user_prefs" preference.</li>
+
+<li>Attempted a fix for broken domain directory paths on systems where the CLI does not return a reasonable value for (or does not support) GetDomainLocation.</li>
+
+<li>Fixed a bug where preferences for the root domain were improperly cached if the CLI was not in use.<br/><br/></li>
+
+</ul>
+</dd>
+
+<dt>1.5b1 - 21 December 2005</dt>
 <dd>
 <p>Major Changes</p>
 <ul>
 
-<li>Added support for SQL-based user preferences and auto-whitelists with new configuration options "sql_user_prefs" and "sql_auto_whitelist".</li>
+<li>Added support for SQL-based user preferences and auto-whitelists with new configuration options "sql_user_prefs" and "sql_auto_whitelist" (thanks to Stephane Claude and Duane Hill for spurring me to action on SQL support).</li>
 
 <li>Added support for scanning messages addressed to mailing lists with
 new configuration option "list_scan".</li>
@@ -1030,7 +1050,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-21 December 2005<br />
+22 December 2005<br />
 </address>
 </body>
 </html>
