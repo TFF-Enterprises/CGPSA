@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.4</h1>
-<h2>Copyright &copy; 2002-2005 TFF Enterprises<br/>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.5</h1>
+<h2>Copyright &copy; 2002-2006 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
 
@@ -38,10 +38,10 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a>, 
-released 2 January 2005.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a>, 
+released 23 August 2006.</p>
 
-<p>The current testing version of CGPSA is 1.5b2, released 22 December 2005, and is available from the <a href="beta/">testing version page</a>.</p>
+<p>There is currently no version of CGPSA in testing.</p>
 
 <h2>Documentation</h2>
 
@@ -367,6 +367,8 @@ verbatim or modified form, whether or not the product is open-source.
 You may of course modify the source code in any way you like for use on
 your own system.</p>
 
+<p>If you want to provide some little bit of support for CGPSA's development, you can do your shopping at <a href="http://www.tffenterprises.com/amazon/">Amazon</a> via the link in this sentence.</p>
+
 <hr/>
 
 <h3 id="bugs">Bug Reports, Feature Requests, and the Like</h3>
@@ -393,6 +395,42 @@ file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a> - 23 August 2006</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>Added support for SQL-based user preferences and auto-whitelists with new configuration options "sql_user_prefs" and "sql_auto_whitelist" (thanks to Stephane Claude and Duane Hill for spurring me to action on SQL support).</li>
+
+<li>Added support for scanning messages addressed to mailing lists with
+new configuration option "list_scan".</li>
+
+<li>CGPSA now strips "Envelope-To" headers from messages when scanning in full-featured mode, to prevent header-based relay trickery.<br/><br/></li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+
+<li>Moved CGPSA-generated headers to the top of the header block, so as to be friendlier to DomainKeys.<br/><br/></li>
+
+</ul>
+<p>Bug Fixes</p>
+<ul>
+
+<li>Fixed a bug where, on newer versions of CommuniGate Pro, the combination
+of DMA spam filing and account detail (that is, an address of the form "foo+bar@email.com") caused spam to bounce rather than to be filed in the spam mailbox.</li>
+
+<li>Implemented a fix for broken domain directory paths on systems where the CLI does not return a reasonable value for (or does not support) GetDomainLocation.</li>
+
+<li>Fixed a bug where preferences for the root domain were improperly cached if the CLI was not in use.<br/><br/></li>
+
+</ul>
+<p>Known Issues</p>
+<ul>
+<li>Same as for Version 1.4.<br/><br/></li>
+</ul>
+</dd>
 
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a> - 2 January 2005</dt>
 <dd>
@@ -995,14 +1033,14 @@ installed if CGPSA is running with "use_cli" set to false (or in headers-only mo
 to support individual auto-whitelists, Bayes databases, and
 SpamAssassin preferences for CommuniGate users. This hypothetical
 version of CGPSA will also be refactored to be somewhat more
-object-oriented and modular (because 2400-line Perl scripts are not
+object-oriented and modular (because 2700-line Perl scripts are not
 the easiest things in the world to maintain).</p>
 
 <hr/>
 
 <h3 id="legal">Legal Stuff</h3>
 
-<p>CommuniGate is a registered trademark of Stalker Software, Inc. SpamAssassin is a registered trademark of Deersoft, Inc.</p>
+<p>CommuniGate is a registered trademark of Stalker Software, Inc.</p>
 
 <hr/>
 
@@ -1011,7 +1049,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-22 December 2005<br />
+23 August 2006<br />
 </address>
 </body>
 </html>

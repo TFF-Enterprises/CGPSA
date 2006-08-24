@@ -2,8 +2,8 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.4
-# Copyright (C) 2002-2004 TFF Enterprises
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5
+# Copyright (C) 2002-2006 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
 #
@@ -85,7 +85,7 @@ our $error_pathname = $cgp_base.$root_config_directory."cgpsa.err";
 # The domain suffix is the path to a domain configuration file starting 
 # after the domain name, including a leading "/".
 
-our $legacy_domain_prefix = $cgp_base."Domains/";
+our $legacy_domain_prefix = "Domains/";
 our $domain_config_filename = "cgpsa.domainconf";
 our $domain_config_suffix = 
     "/".$domain_config_directory.$domain_config_filename;
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.4";
+our $VERSION = "1.5";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -265,6 +265,7 @@ sub initialize
     
     error_exit("Unable to read CGPSA configuration file, exiting.");
   }
+  loadDomainConfig("");
   print("* Configuration File Loaded\n");
   
   print("* Parallel Requests Mode: ");
@@ -363,11 +364,20 @@ sub initialize
       LOCAL_RULES_DIR => $root_conf->{sa_local_rules_dir}
      });
     
-  # Set up a persistent address list factory, for auto-whitelisting
+  # Set up persistent address list factories, for auto-whitelisting;
+  # there's always a DBBasedAddrList module, but under 2.6x there isn't a
+  # SQLBasedAddrList one.
   
   require Mail::SpamAssassin::DBBasedAddrList;
-  our $addrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
-
+  our $dbaddrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
+  our $sqladdrlistfactory = undef;
+  
+  eval
+  {
+    require Mail::SpamAssassin::SQLBasedAddrList;
+    $sqladdrlistfactory = Mail::SpamAssassin::SQLBasedAddrList->new();
+  };
+    
   # If we're not using domain or user prefs, finish setting up 
   # SpamAssassin...
   
@@ -375,7 +385,16 @@ sub initialize
   {
     if ($root_conf->{use_auto_whitelist})
     {
-      $spamassassin->set_persistent_address_list_factory($addrlistfactory);
+      if ($root_conf->{sql_auto_whitelist})
+      {
+        $spamassassin->set_persistent_address_list_factory
+          ($sqladdrlistfactory);
+      }
+      else
+      {
+        $spamassassin->set_persistent_address_list_factory
+          ($dbaddrlistfactory);
+      }
     }
     if (-e "$root_conf->{default_home_dir}$sa_prefs_suffix")
     {
@@ -693,7 +712,8 @@ sub submitMessage
   my $cli = ${$cli_ptr};
   my $filename = our $cgp_base."Submitted/".getUniqueFilename(@addresses);
   my $orig_address = "";
-  
+  my $address_changed = 0;
+    
   if ($account_name ne "")
   {
     # we need to attempt direct mailbox addressing to a spambox
@@ -714,7 +734,7 @@ sub submitMessage
     }
     my $user_conf = $user_conf_cache{$account_name};
     my $receiver_address = "";
-  
+    
     if ($cli && $user_conf->{use_dma_spam_mailbox})
     {
       # Verify that DMA is enabled on the server
@@ -734,16 +754,33 @@ sub submitMessage
             # we found or created the mailbox, so let's modify the
             # local address accordingly
          
-            if ($address =~ /^(.*)#(\S*)@(\S*)$/)
+            $receiver_address = $address;
+            
+            if ($receiver_address =~ /^(.*)\+(\S*)@(\S*)$/)
+            {
+              # it has an account detail; we need to get rid of that, 
+              # for DMA to work reliably
+              
+              $orig_address = $address;
+              $address_changed = 1;
+              $receiver_address = $1."@".$3;
+            }
+            
+            if ($receiver_address =~ /^(.*)#(\S*)@(\S*)$/)
             {
               # it already has a DMA, so we remove it and put it in
               # an X-Original-To header
               
-              $orig_address = "\"".$1."#".$2."\"@".$3;
+              if ($address_changed == 0)
+              {
+                $address_changed = 1;
+                $orig_address = $address;
+              }
+              
               $receiver_address = 
                 "\"".$user_conf->{spam_mailbox_name}."#".$2."\"@".$3;
             }
-            elsif ($address =~ /^(\S*)@(\S*)$/)
+            elsif ($receiver_address =~ /^(\S*)@(\S*)$/)
             {
               # it's got a domain
               
@@ -780,7 +817,7 @@ sub submitMessage
   foreach my $local_addr (@addresses) 
   {
     print OUTFILE "Envelope-To: <".$local_addr.">\n";
-    if ($orig_address ne "")
+    if ($address_changed != 0)
     {
       print OUTFILE "X-TFF-CGPSA-Original-To: ".$orig_address."\n";
     }
@@ -1146,6 +1183,7 @@ sub checkMessage
   }
   
   $spamassassin->{conf}->parse_scores_only($sa_settings_text);
+  
   if ($spamassassin->{conf}->{allow_user_rules})
   {
     $spamassassin->{conf}->finish_parsing();
@@ -1155,6 +1193,14 @@ sub checkMessage
   {
     delete $spamassassin->{conf}->{main};
   }
+    
+  # Now, if SQL user prefs are enabled, let's load them
+  
+  if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&
+      $user_conf->{sql_user_prefs})
+  {
+    $spamassassin->load_scoreonly_sql($account_name);
+  }
   
   # Now we've got preferences, let's deal with state files. If auto
   # whitelisting is on for this domain, we set the persistent address
@@ -1163,8 +1209,16 @@ sub checkMessage
   if ($domain_conf->{allow_auto_whitelist} &&
       $user_conf->{use_auto_whitelist})
   {
-    $spamassassin->set_persistent_address_list_factory
-      (our $addrlistfactory);
+    if ($user_conf->{sql_auto_whitelist})
+    {
+      $spamassassin->set_persistent_address_list_factory
+        (our $sqladdrlistfactory);
+    }
+    else
+    {
+      $spamassassin->set_persistent_address_list_factory
+        (our $dbaddrlistfactory);
+    }
   }
   else
   {
@@ -1180,7 +1234,14 @@ sub checkMessage
   my $sa3_userstate_dir = 
     $root_conf->{default_home_dir}.$sa_prefs_dir_suffix;
   
-  if ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
+  if ($user_conf->{sql_user_prefs})
+  {
+    debug(7, "SQL preferences in use, no state or user home directory");
+    $sa2_user_dir = undef;
+    $sa3_user_dir = undef;
+    $sa3_userstate_dir = undef;
+  }
+  elsif ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
     $sa2_user_dir = $account_dir;
     $sa3_userstate_dir = $account_dir.$sa_prefs_dir_suffix;
@@ -1289,7 +1350,13 @@ sub checkMessage
         $mail = $spamassassin->parse([@msg_copy], 1);
         $status->{msg} = $mail;
       }
-      
+
+      # remove "Envelope-To" headers, because they cause deliveries to
+      # bypass spam filtering
+        
+      $mail->delete_header("Envelope-To");
+      $mail->delete_header("Envelope-to");
+        
       if ($root_conf->{spamassassin_api_version} == 2)
       {
         $status->rewrite_mail();
@@ -1329,22 +1396,16 @@ sub checkMessage
     my $blank = 0;
     $rewritten_mail_scalar = "";
     
+    # add the new headers at the top, so as to not break DomainKeys
+    
+    $rewritten_mail_scalar .=
+      $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+    $rewritten_mail_scalar .= 
+      $root_conf->{loop_prevention_header} . ": Scan Failed\n";
+          
     foreach my $line (@$msg_ptr)
     {
-      if (($blank == 0) && ($line =~ /^\s+$/))
-      {
-        # a blank line, end of headers
-       
-        $rewritten_mail_scalar .=
-          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
-        $rewritten_mail_scalar .= 
-          $root_conf->{loop_prevention_header} . ": Scan Failed\n\n";
-        $blank = 1;
-      }
-      else
-      {
-        $rewritten_mail_scalar .= $line;
-      }
+      $rewritten_mail_scalar .= $line;
     }
 
     ${$is_spam_ptr} = 0;
@@ -1361,22 +1422,16 @@ sub checkMessage
     my @rewritten_lines = split (/^/m, $rewritten_mail_scalar);
     $rewritten_mail_scalar = "";
     
+    # add the new headers at the top, so as to not break DomainKeys
+    
+    $rewritten_mail_scalar .=
+      $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
+    $rewritten_mail_scalar .= 
+      $root_conf->{loop_prevention_header} . ": Scanned\n";
+          
     foreach my $line (@rewritten_lines)
     {
-      if (($blank == 0) && ($line =~ /^\s+$/))
-      {
-        # a blank line, end of headers
-       
-        $rewritten_mail_scalar .=
-          $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
-        $rewritten_mail_scalar .= 
-          $root_conf->{loop_prevention_header} . ": Scanned\n\n";
-        $blank = 1;
-      }
-      else
-      {
-        $rewritten_mail_scalar .= $line;
-      }
+      $rewritten_mail_scalar .= $line;
     }
   }
 
@@ -1507,7 +1562,7 @@ sub process_file
           
           if ($cli->isSuccess) 
           {
-            if ($module eq "LOCAL")
+            if (($module eq "LOCAL") || ($module eq "LIST"))
             {
               # local (or system) delivery, add to appropriate
               # local list. we preserve the envelope address as much
@@ -1554,13 +1609,21 @@ sub process_file
                          "ADDHEADER mode for all recipients");
                 $all_destination = 1;
               }
-              
-              if ($domain_conf->{use_cgpsa} && !$all_destination)
+                  
+              if ($domain_conf->{use_cgpsa} && !$all_destination &&
+                  !(($module eq "LIST") && !$domain_conf->{list_scan}))
               {
                 # Let's get the user's home directory and try to load 
                 # their preferences
-                my $account_dir = getUserInformation(\$cli, $host);
-                my $user_conf = $user_conf_cache{$host};
+                
+                my $account_dir = $domain_conf->{default_home_dir};
+                my $user_conf = $domain_conf;
+                
+                if ($module ne "LIST")
+                {
+                  $account_dir = getUserInformation(\$cli, $host);
+                  $user_conf = $user_conf_cache{$host};
+                }
                   
                 if ($user_conf->{direct_mailbox_rewrite} &&
                     ($dma_mailbox ne ""))
@@ -1677,6 +1740,12 @@ sub process_file
                     push(@remote_recipients, $local_address);
                   }
                 }
+              }
+              elsif ($module eq "LIST")
+              {
+                debug(7, "CGPSA disabled by domain configuration for ".
+                         "mailing lists");
+                push(@remote_recipients, $local_address);
               }
               elsif (!$all_destination)
               {
@@ -1802,10 +1871,6 @@ sub process_file
     
     # if the message score exceeds the threshold and we're throwing out
     # messages, we discard the message... otherwise we add headers
-    
-    debug(9, "root_conf->{auto_discard} = ".$root_conf->{auto_discard}.
-             ", root_conf->{discard_threshold} = ".
-             $root_conf->{discard_threshold});
              
     if ($root_conf->{auto_discard} && 
         $msg_score >= $root_conf->{discard_threshold})
@@ -1882,11 +1947,6 @@ sub process_file
           checkMessage(\@msglines, "<default>", $domain_name, "<default>", 
                        $domain_conf->{default_home_dir}, 
                        \$is_spam, \$msg_score);
-        
-        debug(9, "domain_conf->{auto_discard} = ".
-              $domain_conf->{auto_discard}.
-              ", domain_conf->{discard_threshold} = ".
-              $domain_conf->{discard_threshold});
 
         if ($domain_conf->{auto_discard} &&
             ($msg_score >= $domain_conf->{discard_threshold}))
@@ -2025,6 +2085,7 @@ sub loadRootConfig
   $root_conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
   $root_conf->{scan_domains} = 0;
   undef @scan_domains;
+  $root_conf->{list_scan} = 0;
   $root_conf->{direct_mailbox_scan} = 0;
   $root_conf->{direct_mailbox_rewrite} = 0;
   $root_conf->{debug} = 1;
@@ -2039,6 +2100,7 @@ sub loadRootConfig
   $root_conf->{allow_user_cgpsa_conf} = 1;
   $root_conf->{allow_user_prefs} = 1;
   $root_conf->{use_user_prefs} = 0;
+  $root_conf->{sql_user_prefs} = 0;
   $root_conf->{require_user_prefs} = 0;
   $root_conf->{allow_domain_cgpsa_conf} = 1;
   $root_conf->{use_domain_prefs} = 1;
@@ -2051,6 +2113,7 @@ sub loadRootConfig
   $root_conf->{discard_threshold} = 25.0; 
   $root_conf->{allow_auto_whitelist} = 1;
   $root_conf->{use_auto_whitelist} = 1;
+  $root_conf->{sql_auto_whitelist} = 0;
   $root_conf->{do_network_tests} = 1;
   $root_conf->{stop_at_threshold} = 0;
   $root_conf->{use_c_locale} = 1;
@@ -2320,6 +2383,10 @@ sub readConfigFile
       @scan_domains = split /\s+/, $1;
       $conf->{scan_domains} = 1;
     }
+    elsif ($line =~ /^list[-_]scan[\s\=]+(\S+)$/)
+    {
+      $conf->{list_scan} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^direct[-_]mailbox[-_]scan[\s\=]+(\S+)$/) 
     {
       $conf->{direct_mailbox_scan} = evaluateBoolean($1);
@@ -2368,6 +2435,10 @@ sub readConfigFile
     {
       $conf->{require_user_prefs} = evaluateBoolean($1);
     }
+    elsif ($line =~ /^sql[-_]user[-_]prefs[\s\=]+(\S+)$/) 
+    {
+      $conf->{sql_user_prefs} = evaluateBoolean($1);
+    }
     elsif ($line =~ /^allow[-_]domain[-_]cgpsa[-_]conf[\s\=]+(\S+)$/)
     {
       $conf->{allow_domain_cgpsa_conf} = evaluateBoolean($1);
@@ -2395,6 +2466,10 @@ sub readConfigFile
     elsif ($line =~ /^use[-_]auto[-_]whitelist[\s\=]+(\S+)$/) 
     {
       $conf->{use_auto_whitelist} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^sql[-_]auto[-_]whitelist[\s\=]+(\S+)$/)
+    {
+      $conf->{sql_auto_whitelist} = evaluateBoolean($1);
     }
     elsif ($line =~ /^use[-_]dma[-_]spam[-_]mailbox[\s\=]+(\S+)$/)
     {
