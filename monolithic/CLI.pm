@@ -1,7 +1,7 @@
 ####################################################################
 #  Perl interface to CommuniGate Pro CLI.
 #
-#  Version 2.6.5
+#  Version 2.6.8
 #
 #  Original location: <http://www.stalker.com/CGPerl>
 #  Revision history: <http://www.stalker.com/CGPerl/History.html>
@@ -154,14 +154,16 @@
 # DeleteClusterSkinFile(skinName,fileName)
 
 ############################## Web Interface Tuning
-# ListWebUserInterface
-# GetWebUserInterface
-# PutWebUserInterface
-# DeleteWebUserInterface
+# [List|Get|Put|Delete]WebUserInterface
 # ClearWebUserCache
 
 ############################## Web Interface Integration
-# [Create|Get|Kill]WebUserSession
+# [Create|Get|Kill|Find]WebUserSession
+
+############################## Real-Time Application Administration
+# Create[Domain|Server|Cluster]PBX
+# List[Domain|Server|Cluster]PBXFiles
+# [Read|Store|Delete][Domain|Server|Cluster]PBXFile
 
 ############################## Server commands
 # [Get|Update|Set]Module
@@ -220,10 +222,10 @@ use IO::Socket;
 use Digest::MD5;
 
 
-@CGP::CLI::ISA = qw(IO::Socket::INET);
 
-$CGP::FALSE = 0;
-$CGP::TRUE = 1;
+$CGP::SECURE_LOGIN = 1;
+$CGP::WEBUSER_LOGIN = 0;
+$CGP::TIMEOUT = 60*5-5;  # 5 minutes timeout
 
 $CGP::ERR_STRING = "No error";
 
@@ -235,121 +237,143 @@ $CGP::CLI_CODE_UNKNOW_USER = 500;
 $CGP::CLI_CODE_GEN_ERR = 501;
 $CGP::CLI_CODE_STRANGE = 10000;
 
-$CGP::CLI_CRLF = "\012";
-
-$CGP::SECURE_LOGIN = 1;
-$CGP::WEBUSER_LOGIN = 0;
 
 
-sub new {
-  my ($class, $params) = @_;
 
-  my $login = delete $params->{'login'};
-  my $password = delete $params->{'password'};
-
-  my $isSecureLogin = delete $params->{'SecureLogin'};
-  my $isWebUserLogin = delete $params->{'WebUserLogin'};
+sub connect {
+  my ($this) = @_;
+  $this->{isConnected}=0;  
   
-  
-  $isSecureLogin = $CGP::SECURE_LOGIN unless defined $isSecureLogin;
-  $isWebUserLogin = $CGP::WEBUSER_LOGIN unless defined $isWebUserLogin;
+  delete $this->{theSocket};
 
+  $this->{theSocket} = new IO::Socket::INET( %{$this->{connParams}} );
 
-  croak 'You must pass login parameter to CGP::CLI::new'
-    unless defined $login;
-  croak 'You must pass password parameter to CGP::CLI::new'
-    unless defined $password;
-
-  croak 'SecureLogin and WebUserLogin are mutually exclusive'
-    if($isSecureLogin && $isWebUserLogin);
-
-  #print %$params;
-
-  my $this = SUPER::new $class (%$params);
-
-  unless(defined $this && $this) {
+  unless(defined $this->{theSocket} && $this->{theSocket}) {
     $CGP::ERR_STRING="Can't open connection to CGPro Server";
     return undef;
   };
-
-  $this->autoflush(1);
+  $this->{theSocket}->autoflush(1);
 
   unless($this->_parseResponse()) {
     $CGP::ERR_STRING="Can't read CGPro Server prompt";
     return undef;
   };
 
-  if($isSecureLogin) {
-    ${*$this}{'errMsg'} =~ /(\<.*\@*\>)/;
-
+  if($this->{isSecureLogin} && $this->{errMsg} =~ /(\<.*\@*\>)/) {
     my $md5=Digest::MD5->new;
     if($md5) {
-      $md5->add($1.$password);
-      $this->send('APOP '.$login.' '.$md5->hexdigest);
+      $md5->add($1.$this->{password});
+      $this->send('APOP '.$this->{login}.' '.$md5->hexdigest);
       $this->_parseResponse();
     } else {
       $CGP::ERR_STRING="Can't create MD5 object";
-      close($this);
+      close($this->{theSocket});
       return undef;
     }
-  } elsif($isWebUserLogin) {
-    $this->send('AUTH WEBUSER '.$login.' '.$password);
+  } elsif($this->{isWebUserLogin}) {
+    $this->send('AUTH WEBUSER '.$this->{login}.' '.$this->{password});
     $this->_parseResponse();
   
   } else {  
-    $this->send('USER '.$login);
+    $this->send('USER '.$this->{login});
     $this->_parseResponse();
-    return $CGP::FALSE unless ${*$this}{'errCode'} == $CGP::CLI_CODE_PASSWORD;
-    $this->send('PASS '.$password);
+    unless( $this->{errCode} == $CGP::CLI_CODE_PASSWORD) {
+      $CGP::ERR_STRING="Unexpected answer: ".$this->{errCode};
+      close($this->{theSocket});
+      return undef;
+    }
+    $this->send('PASS '.$this->{password});
     $this->_parseResponse();    
   }
 
   unless($this->isSuccess) {
-    $CGP::ERR_STRING=${*$this}{'errMsg'};
-    close($this);
+    $CGP::ERR_STRING=$this->{errMsg};
+    close($this->{theSocket});
     return undef;
   }
   $this->send('INLINE');
   $this->_parseResponse();
   $this->setStringsTranslateMode(0);
+  $this->{isConnected}=1;  
+  1;
+}
 
+
+sub new {
+  my ($class, $params) = @_;
+  my $this = {};
+  
+  $this->{login} = delete $params->{'login'};
+  $this->{password} = delete $params->{'password'};
+
+  $this->{isSecureLogin} = delete $params->{'SecureLogin'};
+  $this->{isWebUserLogin} = delete $params->{'WebUserLogin'};
+  
+  
+  $this->{isSecureLogin} = $CGP::SECURE_LOGIN unless defined $this->{isSecureLogin};
+  $this->{isWebUserLogin} = $CGP::WEBUSER_LOGIN unless defined $this->{isWebUserLogin};
+
+
+  croak 'You must pass login parameter to CGP::CLI::new'
+    unless defined $this->{login};
+  croak 'You must pass password parameter to CGP::CLI::new'
+    unless defined $this->{password};
+
+  croak 'SecureLogin and WebUserLogin are mutually exclusive'
+    if($this->{isSecureLogin} && $this->{isWebUserLogin});
+
+  #print %$params;
+  bless $this;
+  $this->{connParams}=$params;
+  
+  if(!(defined $params->{'connectNow'}) || $params->{'connectNow'}) { 
+    unless($this->connect()) {
+      return undef;
+    }
+  }
   $this;
+}
+
+sub DESTROY {
+  my $this = shift;
+  $this->Logout() if($this->{isConnected});
 }
 
 sub getErrCode {
   my $this = shift;
-  return ${*$this}{'errCode'};
+  return $this->{errCode};
 }
 
 sub getErrMessage {
   my $this = shift;
-  return ${*$this}{'errMsg'};
+  return $this->{errMsg};
 }
 
 sub getErrCommand {
   my $this = shift;
-  return ${*$this}{'currentCGateCommand'};
+  return $this->{'currentCGateCommand'};
 }
 
 sub isSuccess {
   my $this = shift;
-  return (${*$this}{'errCode'} == $CGP::CLI_CODE_OK || ${*$this}{'errCode'} == $CGP::CLI_CODE_OK_INLINE);
+  return ($this->{errCode} == $CGP::CLI_CODE_OK || $this->{errCode} == $CGP::CLI_CODE_OK_INLINE);
 }
 
 sub setDebug {
   my ($this, $debugFlag) = @_;
-  ${*$this}{'debug'} = $debugFlag;    
+  $this->{'debug'} = $debugFlag;    
 }
 
 sub setStringsTranslateMode {
   my ($this, $onFlag) = @_;
-  ${*$this}{'translateStrings'} = $onFlag;    
+  $this->{'translateStrings'} = $onFlag;    
 }
 
 sub Logout {
   my $this = shift;
   $this->send('QUIT');
   $this->_parseResponse();
+  $this->{isConnected}=0;
 }
 
 sub NewPassword {
@@ -1949,11 +1973,24 @@ sub ClearWebUserCache {
 #   Web Interface Integration
 
 sub CreateWebUserSession {
-  my ($this, $accountName, $ipAddress, $wml) = @_;
-  croak 'usage CGP::CLI->CreateWebUserSession($accountName, $IP_Address,"WML")'
+  my ($this, $accountName, $ipAddress, $wml,$skin) = @_;
+  croak 'usage CGP::CLI->CreateWebUserSession($accountName, $IP_Address[, "WML"[,"mySkin"]] )'
     unless defined $accountName && defined $ipAddress;
   my $line='CreateWebUserSession '.$accountName.' ADDRESS '.$ipAddress;
-  $line .= ' WML' if($wml);
+  $line .= " $wml" if($wml);
+  $line .= " SKIN $skin" if($skin);
+  
+  $this->send($line);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+sub FindWebUserSession {
+  my ($this, $accountName,$address) = @_;
+  croak 'usage CGP::CLI->FindWebUserSession($accountName [,$address])' unless defined $accountName;
+
+  my $line='FindWebUserSession '.$accountName;
+  $line .= ' ADDRESS '.$address if($address);
+
   $this->send($line);
   return undef unless $this->_parseResponse();
   $this->parseWords($this->getWords);
@@ -1971,6 +2008,8 @@ sub GetWebUserSession {
   $this->parseWords($this->getWords);
 }
 
+
+
 sub KillWebUserSession {
   my ($this, $sessionID,$domain) = @_;
   croak 'usage CGP::CLI->KillWebUserSession($sessionID [,$domain])' unless defined $sessionID;
@@ -1981,6 +2020,151 @@ sub KillWebUserSession {
   $this->_parseResponse();
 }
 
+#############################################
+#   Real-Time Application Administration 
+ 
+sub CreateDomainPBX {
+  my ( $this, $domain, $language ) = @_;
+  croak 'usage CGP::CLI->CreateDomainPBX($domainName,$language)'
+      unless defined $domain;
+  my $line = 'CreateDomainPBX '.$domain;
+  $line .= ' FILE '.$this->printWords($language) if($language);
+      
+  $this->send($line);
+  $this->_parseResponse();
+}
+
+sub ListDomainPBXFiles {
+  my ($this, $domain,$language) = @_;
+  croak 'usage CGP::CLI->ListDomainPBXFiles($domainName,$language)'
+      unless defined $domain;
+  my $line = 'ListDomainPBXFiles '.$domain;
+  $line .= ' FILE '.$this->printWords($language) if($language);
+  $this->send($line);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub ReadDomainPBXFile {
+  my ( $this, $domain, $fileName ) = @_;
+  croak 'usage CGP::CLI->ReadDomainPBXFile($domainName,$fileName)'
+      unless defined $domain && defined $fileName;
+
+  $this->send('ReadDomainPBXFile '.$domain.' FILE '.$this->printWords($fileName));
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub StoreDomainPBXFile {
+  my ( $this, $domain, $fileName,$base64data ) = @_;
+  croak 'usage CGP::CLI->StoreDomainPBXFile($domainName,$fileName,$base64data)'
+      unless defined $domain && defined $fileName && defined $base64data;
+  $this->send('StoreDomainPBXFile '.$domain.' FILE '.$this->printWords($fileName).' DATA "'.$base64data.'"');
+  $this->_parseResponse();
+}
+
+sub DeleteDomainPBXFile {
+  my ( $this, $domain, $fileName ) = @_;
+  croak 'usage CGP::CLI->DeleteDomainPBXFile($domainName,$fileName)'
+      unless defined $domain && defined $fileName;
+
+  $this->send('StoreDomainPBXFile '.$domain.' FILE '.$this->printWords($fileName).' DELETE');
+  $this->_parseResponse();
+}
+
+#--
+
+sub CreateServerPBX {
+  my ( $this, $language ) = @_;
+  my $line = 'CreateServerPBX';
+  $line .= $this->printWords($language) if($language);      
+  $this->send($line);
+  $this->_parseResponse();
+}
+
+sub ListServerPBXFiles {
+  my ($this,$language) = @_;
+
+  my $line = 'ListServerPBXFiles ';
+  $line .= $this->printWords($language) if($language);
+  $this->send($line);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub ReadServerPBXFile {
+  my ( $this, $fileName ) = @_;
+  croak 'usage CGP::CLI->ReadServerPBXFile($fileName)'
+      unless defined $fileName;
+
+  $this->send('ReadServerPBXFile '.$this->printWords($fileName));
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub StoreServerPBXFile {
+  my ( $this, $fileName,$base64data ) = @_;
+  croak 'usage CGP::CLI->StoreServerPBXFile($fileName,$base64data)'
+      unless  defined $fileName && defined $base64data;
+  $this->send('StoreServerPBXFile ' .$this->printWords($fileName).' DATA "'.$base64data.'"');
+  $this->_parseResponse();
+}
+
+sub DeleteServerPBXFile {
+  my ( $this, $fileName ) = @_;
+  croak 'usage CGP::CLI->DeleteServerPBXFile($fileName)'
+      unless defined $fileName;
+
+  $this->send('StoreServerPBXFile '.$this->printWords($fileName).' DELETE');
+  $this->_parseResponse();
+}
+
+#--
+
+sub CreateClusterPBX {
+  my ( $this, $language ) = @_;
+  my $line = 'CreateClusterPBX';
+  $line .= $this->printWords($language) if($language);      
+  $this->send($line);
+  $this->_parseResponse();
+}
+
+sub ListClusterPBXFiles {
+  my ($this,$language) = @_;
+
+  my $line = 'ListClusterPBXFiles ';
+  $line .= $this->printWords($language) if($language);
+  $this->send($line);
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub ReadClusterPBXFile {
+  my ( $this, $fileName ) = @_;
+  croak 'usage CGP::CLI->ReadClusterPBXFile($fileName)'
+      unless defined $fileName;
+
+  $this->send('ReadClusterPBXFile '.$this->printWords($fileName));
+  return undef unless $this->_parseResponse();
+  $this->parseWords($this->getWords);
+}
+
+sub StoreClusterPBXFile {
+  my ( $this, $fileName,$base64data ) = @_;
+  croak 'usage CGP::CLI->StoreClusterPBXFile($fileName,$base64data)'
+      unless  defined $fileName && defined $base64data;
+  $this->send('StoreClusterPBXFile ' .$this->printWords($fileName).' DATA "'.$base64data.'"');
+  $this->_parseResponse();
+}
+
+sub DeleteClusterPBXFile {
+  my ( $this, $fileName ) = @_;
+  croak 'usage CGP::CLI->DeleteClusterPBXFile($fileName)'
+      unless defined $fileName;
+
+  $this->send('StoreClusterPBXFile '.$this->printWords($fileName).' DELETE');
+  $this->_parseResponse();
+}
 
 #############################################
 #  Server Settings
@@ -2422,35 +2606,38 @@ sub _setStrangeError
     my ($this, $line, $code) = @_;
     if ($code)
     {
-        ${*$this}{'errCode'} = $code;
+        $this->{errCode} = $code;
     }
     else
     {
-        ${*$this}{'errCode'} = $CGP::CLI_CODE_STRANGE;
+        $this->{errCode} = $CGP::CLI_CODE_STRANGE;
     }
-    ${*$this}{'errMsg'} = $line;
-    return $CGP::FALSE;
+    $this->{errMsg} = $line;
+    return 0;
 }
 
 sub _parseResponse
 {
   my $this = shift;
-  my $responseLine = <$this>;
+
+  my $responseLine = $this->{theSocket}->getline();
+
 
   print STDERR "CGP::CLI->_parseResponse::responseLine = $responseLine\n\n"
-      if ${*$this}{'debug'};
+      if $this->{'debug'};
 
   $responseLine =~ /^(\d+)\s(.*)$/;
   return $this->_setStrangeError($responseLine) unless ($1);
-  ${*$this}{'errCode'} = $1;
+  $this->{errCode} = $1;
   if($1 == $CGP::CLI_CODE_OK_INLINE) {
-    ${*$this}{'inlineResponse'} = $2;	
-    ${*$this}{'errMsg'} = 'OK';
+    $this->{'inlineResponse'} = $2;	
+    $this->{errMsg} = 'OK';
   } else {
-    ${*$this}{'errMsg'} = $2;
-    chomp(${*$this}{'errMsg'});
-    ${*$this}{'errMsg'} =~ s/\r$//;
+    $this->{errMsg} = $2;
+    chomp($this->{errMsg});
+    $this->{errMsg} =~ s/\r$//;
   }
+  $this->{'lastAccess'}=time();
   $this->isSuccess;
 }
 
@@ -2496,7 +2683,7 @@ sub convertOutput {
 
 sub printWords {
   my ($this,$data)= @_;
-  return convertOutput($data,${*$this}{'translateStrings'});
+  return convertOutput($data,$this->{'translateStrings'});
 }
 
 sub strip
@@ -2509,14 +2696,14 @@ sub strip
 
 sub getWords {
   my $this = shift;
-  if(${*$this}{'errCode'} == $CGP::CLI_CODE_OK_INLINE) {
-	return ${*$this}{'inlineResponse'};
+  if($this->{errCode} == $CGP::CLI_CODE_OK_INLINE) {
+	return $this->{'inlineResponse'};
   }
   my ($bag, $line) = ('', '');
-  my $firstLine = $CGP::TRUE;
+  my $firstLine = 1;
   my $lastLine = '';
-  while ($CGP::TRUE) {
-    $line = <$this>;
+  while (1) {
+    $line = $this->{theSocket}->getline();
     chomp $line;
     $line = strip($line);
     if($firstLine) {
@@ -2525,7 +2712,7 @@ sub getWords {
         $lastLine = '\)' if $1 eq '(';
         $lastLine = '\}' if $1 eq '{';
         $lastLine = $lastLine . '$';
-        $firstLine = $CGP::FALSE;
+        $firstLine = 0;
       }
     }
     $bag .= $line;
@@ -2537,11 +2724,21 @@ sub getWords {
 
 sub send {
   my ($this, $command) = @_;
-  ${*$this}{currentCGateCommand} = $command;
+
+  if(time()-$this->{'lastAccess'} > $CGP::TIMEOUT ||
+     !($this->{theSocket}) ||
+     $this->{theSocket}->error()) {
+ 
+    unless($this->connect()) {
+      die "Failure: Can't reopen CLI connection";
+    }
+  }
+
+  $this->{currentCGateCommand} = $command;
   print STDERR ref($this) . "->send($command)\n\n"
-    if ${*$this}{'debug'};
-  ${*$this}{'lastAccess'}=time();
-  print $this $command.$CGP::CLI_CRLF;
+    if $this->{'debug'};
+  $this->{'lastAccess'}=time();
+  print {$this->{theSocket}} $command."\012";
 }
 
 
@@ -2549,7 +2746,7 @@ sub send {
 
 sub skipSpaces {
   my $this = shift;
-  while(${*$this}{'span'} < ${*$this}{'len'} && substr(${*$this}{'data'},${*$this}{'span'},1) =~ /\s/) { ++${*$this}{'span'}; }
+  while($this->{'span'} < $this->{'len'} && substr($this->{'data'},$this->{'span'},1) =~ /\s/) { ++$this->{'span'}; }
 }
 
 sub readWord {
@@ -2559,42 +2756,42 @@ sub readWord {
   my $result="";
 
   $this->skipSpaces();
-  if(substr(${*$this}{'data'},${*$this}{'span'},1) eq '"') {
-    $isQuoted=1; ++${*$this}{'span'};
-  } elsif(substr(${*$this}{'data'},${*$this}{'span'},1) eq '[') {
+  if(substr($this->{'data'},$this->{'span'},1) eq '"') {
+    $isQuoted=1; ++$this->{'span'};
+  } elsif(substr($this->{'data'},$this->{'span'},1) eq '[') {
     $isBlock=1;
   }
-  while(${*$this}{'span'} < ${*$this}{'len'}) {
-    my $ch=substr(${*$this}{'data'},${*$this}{'span'},1);
+  while($this->{'span'} < $this->{'len'}) {
+    my $ch=substr($this->{'data'},$this->{'span'},1);
 
     if($isQuoted) {
       if($ch eq '\\') {
-        if(substr(${*$this}{'data'},${*$this}{'span'}+1,3) =~ /^(?:\"|\\|\d\d\d)/) { 
-          $ch=substr(${*$this}{'data'},++${*$this}{'span'},3);
+        if(substr($this->{'data'},$this->{'span'}+1,3) =~ /^(?:\"|\\|\d\d\d)/) { 
+          $ch=substr($this->{'data'},++$this->{'span'},3);
           if($ch =~ /\d\d\d/) {
-            ${*$this}{'span'}+=2;
+            $this->{'span'}+=2;
             $ch=chr($ch);
           } else {
             $ch=substr($ch,0,1);
-            $ch='\\'.$ch unless(${*$this}{'translateStrings'}); 
+            $ch='\\'.$ch unless($this->{'translateStrings'}); 
           }
         }
       } elsif($ch eq '"') {
-        ++${*$this}{'span'};
+        ++$this->{'span'};
         last;
       }
     } elsif($isBlock) {
       if($ch eq ']') {
         $result .= $ch;
-        ++${*$this}{'span'};
+        ++$this->{'span'};
         last;
       }
-    } elsif($ch =~ /[-a-zA-Z0-9\x80-\xff_\.\@\!\#\%]/) {    
+    } elsif($ch =~ /[-a-zA-Z0-9\x80-\xff_\.\@\!\#\%\:]/) {    
     } else {
       last;
     }
     $result .= $ch;
-    ++${*$this}{'span'};
+    ++$this->{'span'};
   }
   return $result;
 }
@@ -2609,12 +2806,12 @@ sub readKey() {
 sub readValue() {
   my $this = shift;
   $this->skipSpaces();
-  my $ch=substr(${*$this}{'data'},${*$this}{'span'},1);
+  my $ch=substr($this->{'data'},$this->{'span'},1);
   if($ch eq '{') {
-    ++${*$this}{'span'};
+    ++$this->{'span'};
     return $this->readDictionary();
   } elsif($ch eq '(') {
-    ++${*$this}{'span'};
+    ++$this->{'span'};
     return $this->readArray();
   } else {
     return $this->readWord();
@@ -2624,20 +2821,20 @@ sub readValue() {
 sub readArray() {
   my $this = shift;
   my $result=[];
-  while(${*$this}{'span'}<${*$this}{'len'}) {
+  while($this->{'span'}<$this->{'len'}) {
     $this->skipSpaces();
-    if(substr(${*$this}{'data'},${*$this}{'span'},1) eq ')') {
-      ++${*$this}{'span'};
+    if(substr($this->{'data'},$this->{'span'},1) eq ')') {
+      ++$this->{'span'};
       last;
     } else {
       my $theValue=$this->readValue();
       $this->skipSpaces();
       push(@$result,$theValue);
-      if(substr(${*$this}{'data'},${*$this}{'span'},1) eq ',') {
-        ++${*$this}{'span'};
-      } elsif(substr(${*$this}{'data'},${*$this}{'span'},1) eq ')') {
+      if(substr($this->{'data'},$this->{'span'},1) eq ',') {
+        ++$this->{'span'};
+      } elsif(substr($this->{'data'},$this->{'span'},1) eq ')') {
       } else { 
-        croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10);
+        croak "CGPro output format error:",substr($this->{'data'},$this->{'span'},10);
       }     
     }
   }
@@ -2647,20 +2844,20 @@ sub readArray() {
 sub readDictionary {
   my $this = shift;
   my $result={};
-  while(${*$this}{'span'} < ${*$this}{'len'}) {
+  while($this->{'span'} < $this->{'len'}) {
     $this->skipSpaces();
-    if(substr(${*$this}{'data'},${*$this}{'span'},1) eq '}') {
-      ++${*$this}{'span'};
+    if(substr($this->{'data'},$this->{'span'},1) eq '}') {
+      ++$this->{'span'};
       last;
     } else {
       my $theKey=$this->readKey();
       $this->skipSpaces();
-      if(substr(${*$this}{'data'},${*$this}{'span'},1) ne '=') { croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10); }
-      ++${*$this}{'span'};
+      if(substr($this->{'data'},$this->{'span'},1) ne '=') { croak "CGPro output format error:",substr($this->{'data'},$this->{'span'},10); }
+      ++$this->{'span'};
       @$result{$theKey}=$this->readValue();
       $this->skipSpaces();
-      if(substr(${*$this}{'data'},${*$this}{'span'},1) ne ';') { croak "CGPro output format error:",substr(${*$this}{'data'},${*$this}{'span'},10); }
-      ++${*$this}{'span'};
+      if(substr($this->{'data'},$this->{'span'},1) ne ';') { croak "CGPro output format error:",substr($this->{'data'},$this->{'span'},10); }
+      ++$this->{'span'};
     }
   }
   return $result;
@@ -2669,9 +2866,9 @@ sub readDictionary {
 sub parseWords {
   my $this = shift;
 
-  ${*$this}{'data'}=shift;
-  ${*$this}{'span'}=0;
-  ${*$this}{'len'}=length(${*$this}{'data'});
+  $this->{'data'}=shift;
+  $this->{'span'}=0;
+  $this->{'len'}=length($this->{'data'});
   return $this->readValue();
 }
 
