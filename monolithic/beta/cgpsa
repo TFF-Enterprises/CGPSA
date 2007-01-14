@@ -2,8 +2,8 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.5b2a
-# Copyright (C) 2002-2006 TFF Enterprises
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.6b1
+# Copyright (C) 2002-2007 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
 #
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.5b2a";
+our $VERSION = "1.6b1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -160,6 +160,7 @@ our %domain_conf_cache = ();
 our %domain_dir_cache = ();
 our %user_conf_cache = ();
 our @scan_domains = undef;
+our @headers_to_include = undef;
 our $spamassassin = undef;
 our $fresh_spamassassin_conf = undef;
 
@@ -211,10 +212,10 @@ sub processHUP
 
   lockStandardOutput();
     
-  select STDERR;
+  select(STDERR);
   print("* ".scalar localtime().
         " HUP Signal Received, Re-initializing CGPSA.\n");
-  select STDOUT;
+  select(STDOUT);
 
   if ($root_conf->{redirect_stderr})
   {
@@ -335,15 +336,11 @@ sub initialize
   
   # first, determine the version
   
-  if ($Mail::SpamAssassin::VERSION < 2.6)
+  if ($Mail::SpamAssassin::VERSION < 3.0)
   {
-    error_exit("CGPSA requires SpamAssassin version 2.60 or higher ". 
+    error_exit("CGPSA requires SpamAssassin version 3.0 or higher ". 
                "(installed SpamAssassin is version ". 
                $Mail::SpamAssassin::VERSION.")");
-  }
-  elsif ($Mail::SpamAssassin::VERSION < 3.0)
-  {
-    $root_conf->{spamassassin_api_version} = 2;
   }
   else
   {
@@ -364,19 +361,12 @@ sub initialize
       LOCAL_RULES_DIR => $root_conf->{sa_local_rules_dir}
      });
     
-  # Set up persistent address list factories, for auto-whitelisting;
-  # there's always a DBBasedAddrList module, but under 2.6x there isn't a
-  # SQLBasedAddrList one.
+  # Set up persistent address list factories, for auto-whitelisting.
   
   require Mail::SpamAssassin::DBBasedAddrList;
+  require Mail::SpamAssassin::SQLBasedAddrList;
   our $dbaddrlistfactory = Mail::SpamAssassin::DBBasedAddrList->new();
-  our $sqladdrlistfactory = undef;
-  
-  eval
-  {
-    require Mail::SpamAssassin::SQLBasedAddrList;
-    $sqladdrlistfactory = Mail::SpamAssassin::SQLBasedAddrList->new();
-  };
+  our $sqladdrlistfactory = Mail::SpamAssassin::SQLBasedAddrList->new();
     
   # If we're not using domain or user prefs, finish setting up 
   # SpamAssassin...
@@ -712,7 +702,8 @@ sub submitMessage
   my $cli = ${$cli_ptr};
   my $filename = our $cgp_base."Submitted/".getUniqueFilename(@addresses);
   my $orig_address = "";
-  
+  my $address_changed = 0;
+    
   if ($account_name ne "")
   {
     # we need to attempt direct mailbox addressing to a spambox
@@ -733,8 +724,9 @@ sub submitMessage
     }
     my $user_conf = $user_conf_cache{$account_name};
     my $receiver_address = "";
-  
-    if ($cli && $user_conf->{use_dma_spam_mailbox})
+    
+    if ($cli && $root_conf->{cli_account_info} && 
+        $user_conf->{use_dma_spam_mailbox})
     {
       # Verify that DMA is enabled on the server
       
@@ -753,16 +745,33 @@ sub submitMessage
             # we found or created the mailbox, so let's modify the
             # local address accordingly
          
-            if ($address =~ /^(.*)#(\S*)@(\S*)$/)
+            $receiver_address = $address;
+            
+            if ($receiver_address =~ /^(.*)\+(\S*)@(\S*)$/)
+            {
+              # it has an account detail; we need to get rid of that, 
+              # for DMA to work reliably
+              
+              $orig_address = $address;
+              $address_changed = 1;
+              $receiver_address = $1."@".$3;
+            }
+            
+            if ($receiver_address =~ /^(.*)#(\S*)@(\S*)$/)
             {
               # it already has a DMA, so we remove it and put it in
               # an X-Original-To header
               
-              $orig_address = "\"".$1."#".$2."\"@".$3;
+              if ($address_changed == 0)
+              {
+                $address_changed = 1;
+                $orig_address = $address;
+              }
+              
               $receiver_address = 
                 "\"".$user_conf->{spam_mailbox_name}."#".$2."\"@".$3;
             }
-            elsif ($address =~ /^(\S*)@(\S*)$/)
+            elsif ($receiver_address =~ /^(\S*)@(\S*)$/)
             {
               # it's got a domain
               
@@ -799,7 +808,7 @@ sub submitMessage
   foreach my $local_addr (@addresses) 
   {
     print OUTFILE "Envelope-To: <".$local_addr.">\n";
-    if ($orig_address ne "")
+    if ($address_changed != 0)
     {
       print OUTFILE "X-TFF-CGPSA-Original-To: ".$orig_address."\n";
     }
@@ -896,40 +905,26 @@ sub checkMessageAddHeader
   foreach my $line (@$msg_ptr)
   {
     $msg_length = $msg_length + length($line);
-    if ($msg_length < 131072)
+    if ($msg_length < $root_conf->{max_scan_length})
     {
       push(@scanlines, $line);
     }
     else
     {
-      debug(5, "Scanning first 128K of message only");
+      debug(5, "Scanning first ".$root_conf->{max_scan_length}.
+               " bytes of message only");
       last;
     }
   }
 
   # Strip all previous SpamAssassin markup from the message
 
-  if ($root_conf->{spamassassin_api_version} == 2)
-  {
-    $mail = Mail::SpamAssassin::NoMailAudit->new(data => [@scanlines]);
-  }
-  else # SA3
-  {
-    $mail = $spamassassin->parse([@scanlines], 1);
-  }
+  $mail = $spamassassin->parse([@scanlines], 1);
 
   my @scanlines = 
     split (/^/m, $spamassassin->remove_spamassassin_markup($mail));
 
-  if ($root_conf->{spamassassin_api_version} == 2)
-  {
-    $mail = Mail::SpamAssassin::NoMailAudit->new
-              ('data' => [@scanlines]);
-  }
-  else # SA3
-  {
-    $mail = $spamassassin->parse([@scanlines], 1);
-  }
+  $mail = $spamassassin->parse([@scanlines], 1);
 
   # Let's do SpamAssassin! No need to read config, because we must have read
   # it already... Similarly, no need to set state directory.
@@ -939,13 +934,17 @@ sub checkMessageAddHeader
     if (my $status = $spamassassin->check($mail))
     {
       my $was_it_spam;
+      my $spamd_log_line = "result: ";
+      
       if ($status->is_spam()) 
       { 
         $was_it_spam = "Identified spam"; 
+        $spamd_log_line .= "Y ";
       } 
       else 
       { 
         $was_it_spam = "Identified non-spam"; 
+        $spamd_log_line .= ". ";
       }
       my $msg_score = sprintf("%.1f", $status->get_hits());
       my $msg_threshold = sprintf("%.1f", $status->get_required_hits());
@@ -954,6 +953,23 @@ sub checkMessageAddHeader
       debug(4, "$was_it_spam ($msg_score/$msg_threshold) in ".
                sprintf("%.1f", getTime() - $start)." seconds");
 
+      if ($root_conf->{spamd_style_log})
+      {
+        # print the spamd-style log to standard error
+        
+        $spamd_log_line .= sprintf("%d", int($status->get_hits() + 0.5));
+        $spamd_log_line .= " - ".$status->get_names_of_tests_hit();
+        $spamd_log_line .= " scantime=".sprintf("%.1f", getTime() - $start);
+        $spamd_log_line .= ",size=".$msg_length;
+        $spamd_log_line .= ",mid=";
+        $spamd_log_line .= ",user=global";
+        $spamd_log_line .= ",bayes=";
+        $spamd_log_line .= ",autolearn=".$status->get_autolearn_status();
+        select(STDERR);
+        print("* ".$spamd_log_line."\n");
+        select(STDOUT);
+      }
+      
       # Add headers. This is very similar to the way SpamAssassin actually
       # does it, and we respect all of SpamAssassin's preferences (because
       # it's a good thing to do, and prevents confusion). 
@@ -974,26 +990,13 @@ sub checkMessageAddHeader
         $headerlist = $status->{conf}->{headers_ham};
       }
 
-      if ($root_conf->{spamassassin_api_version} == 2)
+      my $rewritten_mail = $spamassassin->parse($rewritten_mail_scalar);
+      foreach my $header (keys %{$headerlist})
       {
-        foreach my $header (keys %{$headerlist})
-        { 
-          $newheaders .= "X-Spam-$header: ".
-                         $status->{msg}->get_header("X-Spam-$header").
-                         "\e";
-        }
-      }
-      else # SA3
-      {
-        my $rewritten_mail = $spamassassin->parse($rewritten_mail_scalar);
-        foreach my $header (keys %{$headerlist})
-        {
-          $newheaders .= 
-            "X-Spam-$header: ".
-            $rewritten_mail->get_pristine_header("X-Spam-$header").
-            "\e";
-        }
-        $rewritten_mail->finish();
+        $newheaders .= 
+          "X-Spam-".$header.": ".
+          $rewritten_mail->get_pristine_header("X-Spam-".$header).
+          "\e";
       }
         
       if (!(exists $headerlist->{"Checker-Version"}))
@@ -1007,36 +1010,110 @@ sub checkMessageAddHeader
         
       # always add CGPSA Version header and loop prevention header
       
-      $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
-      $newheaders .= $root_conf->{loop_prevention_header}.": Scanned\e";
+      $newheaders .= mandatory_headers("Scanned");
       
-      if ((length $newheaders) > 4096)
+      # CommuniGate Pro can only take a limited-size response from the 
+      # plug-in (4K, in the versions of CommuniGate Pro released to date); 
+      # let's see if our headers fit within that (taking into account the
+      # "<number> ADDHEADER" part of the response)
+      
+      if (cgp_string_length($newheaders) >
+          $root_conf->{cgp_max_response_length})
       {
-        # the headers are too long, let's cut them down to the 
-        # bare essentials
+        # the headers are too long, so we try to reduce the length of
+        # one SpamAssassin header
         
-        if ($status->is_spam())
+        debug(9, "expanded header length ".
+                 cgp_string_length($newheaders).
+                 " exceeds maximum of ".
+                 $root_conf->{cgp_max_response_length}.
+                 ", attempting header reduction");
+        
+        $newheaders = mandatory_headers("Scanned, Header Reduced");
+        my $header_to_reduce = "";
+        
+        foreach my $header (keys %{$headerlist})
         {
-          $newheaders = 
-            "X-Spam-Status: Yes, hits=".
-            sprintf("%.1f", $status->get_hits())."\e";
-          $newheaders .= "X-Spam-Flag: YES\e";
-        }
-        else
-        {
-          $newheaders = 
-            "X-Spam-Status: No, hits=".
-            sprintf("%.1f", $status->get_hits())."\e";
+          if ($header eq $root_conf->{header_to_reduce})
+          {
+            $header_to_reduce =
+              "X-Spam-".$header.": ".
+              $rewritten_mail->get_pristine_header("X-Spam-".$header).
+              "\e";
+          }
+          else
+          {
+            $newheaders .= 
+              "X-Spam-".$header.": ".
+              $rewritten_mail->get_pristine_header("X-Spam-".$header).
+              "\e";
+          }
         }
         
-        $newheaders .= "X-Spam-Checker-Version: SpamAssassin ".
-                       Mail::SpamAssassin::Version().
-                       " ($Mail::SpamAssassin::SUB_VERSION)\e";
-        $newheaders .= $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
-        $newheaders .= $root_conf->{loop_prevention_header}.
-                       ": Scanned, Headers Truncated\e";
+        # See if there's enough space to add the header we want to reduce,
+        # if we reduce it (to a minimum of "...\e" as the header body); 
+        # first we see how much CGP will expand the header, then we 
+        # calculate whether any of it will fit.
+        
+        my $header_expansion = cgp_string_length($header_to_reduce) - 
+                               length $header_to_reduce;
+                        
+        my $reduced_header_length = 
+          $root_conf->{cgp_max_response_length} -
+          cgp_string_length($newheaders) -
+          $header_expansion - 5; # the 5 is the "...\e" at the end
+        
+        if ($reduced_header_length > 0)
+        {
+          $header_to_reduce = 
+            substr($header_to_reduce, 0, $reduced_header_length).
+            "...\e";
+        }
+        
+        $newheaders .= $header_to_reduce;
       }
       
+      # OK... but the headers could still be too long, so let's check and
+      # see if that's the case.
+      
+      if (cgp_string_length($newheaders) >
+          $root_conf->{cgp_max_response_length})
+      {
+        # The headers _are_ still too long, so now we add headers in the 
+        # order specified in the settings.
+        
+        our @headers_to_include;
+        
+        # First, add the required headers
+        
+        $newheaders = "X-Spam-Checker-Version: SpamAssassin ".
+                      Mail::SpamAssassin::Version().
+                      " ($Mail::SpamAssassin::SUB_VERSION)\e";        
+        $newheaders .= mandatory_headers("Scanned, Headers Truncated");
+        
+        # Next, add headers one at a time until we can't anymore
+        
+        foreach my $header (@headers_to_include)
+        {
+          my $header_value = 
+            $rewritten_mail->get_pristine_header("X-Spam-".$header);
+          if ($header_value)
+          {
+            my $header_text = "X-Spam-".$header.": ".$header_value."\e";
+            
+            # if we can add this header, let's do it
+            
+            if ((cgp_string_length($newheaders) + 
+                 cgp_string_length($header_text)) <
+                $root_conf->{max_response_length})
+            {
+              $newheaders .= $header_text;
+            }
+          }
+        }
+      }
+      
+      $rewritten_mail->finish();
       $status->finish();
       $mail->finish();
     }
@@ -1080,7 +1157,7 @@ sub checkMessage
   my $user_conf = $root_conf;
   our $sa_prefs_suffix;
     
-  if ($root_conf->{use_cli})
+  if ($root_conf->{cli_account_info})
   { 
     # initialize domain/user configurations if necessary
 
@@ -1109,22 +1186,7 @@ sub checkMessage
   my $sa_settings_text = '';
   my $sa3_user_dir = $root_conf->{default_home_dir};
   
-  # First, read the default preferences (this has the effect of "resetting"
-  # the preferences, only necessary in non-parallel-requests mode on SA2.6)
-  
-  if (!$root_conf->{parallel_requests} && 
-      ($root_conf->{spamassassin_api_version} == 2))
-  {
-    if (open(IN, "<".$root_conf->{default_home_dir}.$sa_prefs_suffix))
-    {
-      debug(7, "Reading system default SpamAssassin preferences from ".
-               $root_conf->{default_home_dir}.$sa_prefs_suffix);
-      $sa_settings_text = join($sa_settings_text, <IN>);
-      close(IN);
-    }
-  }
-  
-  # Next, read the domain preferences if they're supposed to be used
+  # First, read the domain preferences if they're supposed to be used
   
   if (($domain_conf != $root_conf) &&
       $domain_conf->{use_domain_prefs} && ($domain_name ne ""))
@@ -1159,11 +1221,7 @@ sub checkMessage
   
   # And now pass the preferences to SpamAssassin
   
-  if ($root_conf->{spamassassin_api_version} == 3)
-  {
-    $spamassassin->{conf}->{main} = $spamassassin;
-  }
-  
+  $spamassassin->{conf}->{main} = $spamassassin;
   $spamassassin->{conf}->parse_scores_only($sa_settings_text);
   
   if ($spamassassin->{conf}->{allow_user_rules})
@@ -1171,10 +1229,7 @@ sub checkMessage
     $spamassassin->{conf}->finish_parsing();
   }
   
-  if ($root_conf->{spamassassin_api_version} == 3)
-  {
-    delete $spamassassin->{conf}->{main};
-  }
+  delete $spamassassin->{conf}->{main};
     
   # Now, if SQL user prefs are enabled, let's load them
   
@@ -1212,20 +1267,17 @@ sub checkMessage
   # SpamAssassin to the default home directory for this domain; otherwise,
   # we point SpamAssassin to the default home directory for the root prefs.
   
-  my $sa2_user_dir = $root_conf->{default_home_dir};
   my $sa3_userstate_dir = 
     $root_conf->{default_home_dir}.$sa_prefs_dir_suffix;
   
   if ($user_conf->{sql_user_prefs})
   {
     debug(7, "SQL preferences in use, no state or user home directory");
-    $sa2_user_dir = undef;
     $sa3_user_dir = undef;
     $sa3_userstate_dir = undef;
   }
   elsif ($domain_conf->{allow_user_state} && $user_conf->{use_user_state})
   {
-    $sa2_user_dir = $account_dir;
     $sa3_userstate_dir = $account_dir.$sa_prefs_dir_suffix;
     debug(7, "State directory is in user home directory (".
              $sa3_userstate_dir.")");
@@ -1233,7 +1285,6 @@ sub checkMessage
   elsif ($domain_conf->{use_domain_state} && 
          $domain_conf->{default_home_dir} ne $root_conf->{default_home_dir})
   {
-    $sa2_user_dir = $domain_conf->{default_home_dir};
     $sa3_userstate_dir = 
       $domain_conf->{default_home_dir}.$sa_prefs_dir_suffix;
     debug(7, "State directory is in domain default home directory (".
@@ -1245,37 +1296,27 @@ sub checkMessage
              $sa3_userstate_dir.")");
   }
     
-  if ($root_conf->{spamassassin_api_version} == 3)
-  {
-    $spamassassin->signal_user_changed 
-      ({
-        username => $account_name,
-        user_dir => $sa3_user_dir,
-        userstate_dir => $sa3_userstate_dir
-       });
-  }
-  else
-  {
-    $spamassassin->signal_user_changed 
-      ({
-        username => $account_name,
-        user_dir => $sa2_user_dir,
-       });
-  }
+  $spamassassin->signal_user_changed 
+    ({
+      username => $account_name,
+      user_dir => $sa3_user_dir,
+      userstate_dir => $sa3_userstate_dir
+     });
   
-  # if the message is longer than 128K characters, scan only the first
-  # 128K characters
+  # if the message is longer than the max message length, scan only that
+  # many characters
   
   foreach my $line (@$msg_ptr)
   {
     $msg_length = $msg_length + length($line);
-    if ($msg_length < 131072)
+    if ($msg_length < $root_conf->{max_scan_length})
     {
       push(@scanlines, $line);
     }
     else
     {
-      debug(5, "Scanning first 128K of message only");
+      debug(5, "Scanning first ".$root_conf->{max_msg_length}.
+               " bytes of message only");
       last;
     }
   }
@@ -1287,77 +1328,47 @@ sub checkMessage
   {
     # Strip all previous SpamAssassin markup from the message
   
-    if ($root_conf->{spamassassin_api_version} == 2)
-    {
-      $mail = Mail::SpamAssassin::NoMailAudit->new(data => [@scanlines]);
-    }
-    else # SA3
-    {
-      $mail = $spamassassin->parse([@scanlines], 1);
-    }
+    $mail = $spamassassin->parse([@scanlines], 1);
   
     @scanlines = 
       split (/^/m, $spamassassin->remove_spamassassin_markup($mail));
     
     $mail->finish();
-    
-    if ($root_conf->{spamassassin_api_version} == 2)
-    {
-      $mail = Mail::SpamAssassin::NoMailAudit->new(data => [@scanlines]);
-    }
-    else # SA3
-    {
-      $mail = $spamassassin->parse([@scanlines], 1);
-    }
+    $mail = $spamassassin->parse([@scanlines], 1);
     
     # And now we're ready to scan!
     
     if ($status = $spamassassin->check($mail))
     {      
-      if ($root_conf->{spamassassin_api_version} == 2)
-      {
-        $mail->replace_original_message([@$msg_ptr]);
-        foreach my $header_name (keys %{$mail->{headers}}) 
-        {
-          if ($header_name =~ /X-Spam-.*/)
-          {
-            $mail->delete_header($header_name);
-          }  
-        }
-      }
-      else # SA3
-      {
-        my @msg_copy = @$msg_ptr;
-        $mail->finish();
-        $mail = $spamassassin->parse([@msg_copy], 1);
-        $status->{msg} = $mail;
-      }
+      my @msg_copy = @$msg_ptr;
+      $mail->finish();
+      $mail = $spamassassin->parse([@msg_copy], 1);
+      $status->{msg} = $mail;
 
       # remove "Envelope-To" headers, because they cause deliveries to
       # bypass spam filtering
         
       $mail->delete_header("Envelope-To");
       $mail->delete_header("Envelope-to");
-        
-      if ($root_conf->{spamassassin_api_version} == 2)
-      {
-        $status->rewrite_mail();
-        $rewritten_mail_scalar = $mail->as_string();
-      }
-      else # SA3
-      {
-        $rewritten_mail_scalar = $status->rewrite_mail();
-      }
+      
+      # remove "Return-Path" header that we added earlier for SPF purposes
+      
+      $mail->delete_header("Return-Path");
+      
+      $rewritten_mail_scalar = $status->rewrite_mail();
       
       my $was_it_spam;
+      my $spamd_log_line = "result: ";
       if ($status->is_spam()) 
       { 
-        $was_it_spam = "Identified spam"; 
+        $was_it_spam = "Identified spam";
+        $spamd_log_line = "Y ";
         ${$is_spam_ptr} = 1;
       } 
       else 
       { 
-        $was_it_spam = "Identified non-spam"; 
+        $was_it_spam = "Identified non-spam";
+        $spamd_log_line = ". ";
         ${$is_spam_ptr} = 0;
       }
       my $msg_score = sprintf("%.1f", $status->get_hits());
@@ -1367,6 +1378,23 @@ sub checkMessage
       debug(4, $was_it_spam." (".$msg_score."/".$msg_threshold.") for ".
                $local_address." in ".sprintf("%.1f", getTime() - $start).
                " seconds");
+               
+      if ($root_conf->{spamd_style_log})
+      {
+        # print the spamd-style log to standard error
+        
+        $spamd_log_line .= sprintf("%d", int($status->get_hits() + 0.5));
+        $spamd_log_line .= " - ".$status->get_names_of_tests_hit();
+        $spamd_log_line .= " scantime=".sprintf("%.1f", getTime() - $start);
+        $spamd_log_line .= ",size=".$msg_length;
+        $spamd_log_line .= ",mid=";
+        $spamd_log_line .= ",user=".$account_name;
+        $spamd_log_line .= ",bayes=";
+        $spamd_log_line .= ",autolearn=".$status->get_autolearn_status();
+        select(STDERR);
+        print("* ".$spamd_log_line."\n");
+        select(STDOUT);
+      }
     }
   };
   
@@ -1380,10 +1408,8 @@ sub checkMessage
     
     # add the new headers at the top, so as to not break DomainKeys
     
-    $rewritten_mail_scalar .=
-      $VERSIONHEADERNAME . ": " . $VERSIONHEADERTEXT . "\n";
-    $rewritten_mail_scalar .= 
-      $root_conf->{loop_prevention_header} . ": Scan Failed\n";
+    $rewritten_mail_scalar .= mandatory_headers("Scan Failed");
+    $rewritten_mail_scalar =~ s/\e/\n/g; # they're returned with \e, not \n
           
     foreach my $line (@$msg_ptr)
     {
@@ -1440,6 +1466,7 @@ sub process_file
   our %user_conf_cache;
   my $filename = shift;
   my $return_path = "";
+  my $source_host = "";
   my @msglines;
   my $cgp_header;
   my $all_destination;
@@ -1496,7 +1523,7 @@ sub process_file
   # At this point, if $cli is undef, we know we're not using it... 
   # In any event, open the message file!
   
-  open (MSGFILE, "$filename");
+  open(MSGFILE, "$filename");
   
   # find all the destinations for the message, determine which are local
   # and remote, and which use individual or systemwide SpamAssassin 
@@ -1523,7 +1550,7 @@ sub process_file
         # figure out if it's local or not, and whether it has custom 
         # preferences or not.
         
-        if ($cli)
+        if ($cli && $root_conf->{cli_account_info})
         {
           my $data; 
           if ($root_conf->{route_mail_extension})
@@ -1782,7 +1809,7 @@ sub process_file
         }
         else 
         {
-          # no CLI, so...
+          # no CLI for account info, so...
           debug(7, "Using default SpamAssassin settings for ".
                    $raw_recipient);
           $default_recipients{""}{$raw_recipient} = "";
@@ -1793,6 +1820,12 @@ sub process_file
         # the return-path
         $return_path = $1;
         debug(8, "Return-Path: $return_path");
+        # add it to the message, so SPF inside SA will work
+        push(@msglines, "Return-Path: <".$return_path.">\n");
+      }
+      elsif ($line =~ /^S.*\[(\S*)\]/)
+      {
+        $source_host = $1;
       }
       elsif ($line =~ /^\s+$/) 
       {
@@ -1865,6 +1898,13 @@ sub process_file
     else
     {
       printResult("ADDHEADER", $newheaders);
+    }
+    
+    # do temporary blacklisting, if necessary
+    
+    if ($root_conf->{use_cli} && $root_conf->{use_temp_blacklist})
+    {
+      tempBlacklist($msg_score, $source_host, \$cli);
     }
   }
   elsif (($default_recipient_count == 0) &&
@@ -2021,7 +2061,14 @@ sub process_file
       }
     }
     
-    # finally, tell the server
+    # finally, do temporary blacklisting if necessary and then
+    # discard the message
+    
+    if ($root_conf->{use_cli} && $root_conf->{use_temp_blacklist})
+    {
+      tempBlacklist($msg_score, $source_host, \$cli);
+    }
+
     printResult("DISCARD");
   }
   
@@ -2033,6 +2080,49 @@ sub process_file
   }
 }
 
+# Do temporary blacklisting, given a message score, a source host,
+# and a pointer to an active CLI (in that order)
+
+sub tempBlacklist
+{
+  my ($msg_score, $source_host, $cli_ptr) = @_;
+  my $cli = ${$cli_ptr};
+  
+  if ($source_host eq "")
+  {
+    debug(9, "No source host, skipping temporary blacklisting.");
+  }
+  elsif ($msg_score < $root_conf->{temp_blacklist_score})
+  {
+    debug(9, "Message score ".$msg_score." below threshold ".
+             $root_conf->{temp_blacklist_score}.", ".
+             "not blacklisting host ".$source_host);
+  }
+  else
+  {
+    # check to see if the host is whitelisted; if it isn't, we'll
+    # blacklist it
+    
+    my $is_whitelisted = 0;
+    my $whitelist = $cli->GetWhiteHoleIPs();
+    if ($cli->isSuccess)
+    {
+      if (($whitelist eq $source_host) ||
+          ($whitelist =~ /$source_host\e/))
+      {
+        $is_whitelisted = 1;
+      }
+    }
+    
+    # if the host isn't whitelisted, we can blacklist it
+    
+    if (!$is_whitelisted)
+    {
+      
+    }
+  }
+}
+
 
 # Read the root preferences. 
 
@@ -2041,6 +2131,7 @@ sub loadRootConfig
   our $root_conf;
   our $root_config_pathname;
   our @scan_domains;
+  our @headers_to_include;
   
   # set default values
   
@@ -2061,8 +2152,10 @@ sub loadRootConfig
   }
   
   $root_conf->{max_requests} = 0;
+  $root_conf->{max_scan_length} = 131072;
   $root_conf->{headers_only} = 0;
   $root_conf->{use_cli} = 1;
+  $root_conf->{cli_account_info} = 1;
   $root_conf->{cgp_port} = 106;
   $root_conf->{loop_prevention_header} = "X-TFF-CGPSA-Filter";
   $root_conf->{scan_domains} = 0;
@@ -2073,6 +2166,7 @@ sub loadRootConfig
   $root_conf->{debug} = 1;
   $root_conf->{debug_level} = 8;
   $root_conf->{sa_debug} = 0;
+  $root_conf->{spamd_style_log} = 0;
   $root_conf->{default_home_dir} = 
     $cgp_base.$root_config_directory."SpamAssassin";
   $root_conf->{helper_path} = "";
@@ -2098,6 +2192,13 @@ sub loadRootConfig
   $root_conf->{sql_auto_whitelist} = 0;
   $root_conf->{do_network_tests} = 1;
   $root_conf->{stop_at_threshold} = 0;
+  $root_conf->{use_temp_blacklist} = 0;
+  $root_conf->{temp_blacklist_threshold} = 8.0;
+  $root_conf->{temp_blacklist_duration} = 900;
+  $root_conf->{cgp_max_response_length} = 4078;
+  $root_conf->{header_to_reduce} = "Status";
+  @headers_to_include = split /\s+/, "Flag Level Status";
+  $root_conf->{headers_to_include} = 1;
   $root_conf->{use_c_locale} = 1;
   $root_conf->{redirect_stderr} = 1;
   $root_conf->{absolute_queue_filenames} = 0;
@@ -2292,6 +2393,7 @@ sub readConfigFile
 {
   my ($conf, $filename) = @_;
   our @scan_domains;
+  our @headers_to_include;
   
   if (!$filename || !(-f $filename) || !open(IN,"<$filename")) 
   {
@@ -2343,6 +2445,10 @@ sub readConfigFile
         $conf->{max_requests} = 0;
       }
     }
+    elsif ($line =~ /^max[-_]scan[-_]length[\s\=]+(\S+)$/)
+    {
+      $conf->{max_scan_length} = $1;
+    }
     elsif ($line =~ /^headers[-_]only[\s\=]+(\S+)$/)
     {
       $conf->{headers_only} = evaluateBoolean($1);
@@ -2350,6 +2456,10 @@ sub readConfigFile
     elsif ($line =~ /^use[-_]cli[\s\=]+(\S+)$/)
     {
       $conf->{use_cli} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^cli[-_]account[-_]info[\s\=]+(\S+)$/)
+    {
+      $conf->{cli_account_info} = evaluateBoolean($1);
     }
     elsif ($line =~ /^cgp[-_]port[\s\=]+(\S+)$/) 
     {
@@ -2387,7 +2497,18 @@ sub readConfigFile
     }
     elsif ($line =~ /^sa[-_]debug[\s\=]+(.+)$/)
     {
-      $conf->{sa_debug} = evaluateBoolean($1);
+      if (isBoolean($1))
+      {
+        $conf->{sa_debug} = evaluateBoolean($1);
+      }
+      else
+      {
+        $conf->{sa_debug} = $1;
+      }
+    }
+    elsif ($line =~ /^spamd[-_]style[-_]log[\s\=]+(\S+)$/)
+    {
+      $conf->{spamd_style_log} = evaluateBoolean($1);
     }
     elsif ($line =~ /^default[-_]home[-_]dir[\s\=]+(.+)$/) 
     {
@@ -2477,6 +2598,32 @@ sub readConfigFile
     {
       $conf->{stop_at_threshold} = evaluateBoolean($1);
     }
+    elsif ($line =~ /^use[-_]temp[-_]blacklist[\s\=]+(\S+)$/)
+    {
+      $conf->{use_temp_blacklist} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^temp[-_]blacklist[-_]threshold[\s\=]+(\S+)$/)
+    {
+      $conf->{temp_blacklist_threshold} = $1;
+    }
+    elsif ($line =~ /^temp[-_]blacklist[-_]duration[\s\=]+(\S+)$/)
+    {
+      $conf->{temp_blacklist_duration} = $1;
+    }
+    elsif ($line =~ /^cgp[-_]max[-_]response[-_]length[\s\=]+(\S+)$/)
+    {
+      $conf->{cgp_max_response_length} = $1;
+    }
+    elsif ($line =~ /^header[-_]to[-_]reduce[\s\=]+(\S+)$/)
+    {
+      $conf->{header_to_reduce} = $1;
+    }
+    elsif ($line =~ /^headers[-_]to[-_]include[\s\=]+(.+)$/)
+    {
+      # got to parse a space-separated list of header names
+      @headers_to_include = split /\s+/, $1;
+      $conf->{headers_to_include} = 1;
+    }
     elsif ($line =~ /^use[-_]c[-_]locale[\s\=]+(\S+)$/)
     {
       $conf->{use_c_locale} = evaluateBoolean($1);
@@ -2508,6 +2655,25 @@ sub readConfigFile
   close(IN);
 }
 
+# Return 1 if the passed parameter is one of the various acceptable
+# ways of writing a Boolean (true/false, yes/no, on/off, 1/0), and 0
+# otherwise.
+
+sub isBoolean
+{
+  my $boolean = shift;
+  
+  if (evaluateBoolean($boolean) || ($boolean =~ /false/i) || 
+      ($boolean =~ /no/i) || ($boolean =~ /off/i) || ($boolean eq "0"))
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
 
 # Return 1 if the passed parameter is one of the various acceptable
 # ways of writing "true" (yes, on, 1, etc.), and 0 otherwise.
@@ -2517,7 +2683,7 @@ sub evaluateBoolean
   my $boolean = shift;
   
   if (($boolean =~ /true/i) || ($boolean =~ /yes/i) ||
-    ($boolean =~ /on/i) || ($boolean eq "1")) 
+      ($boolean =~ /on/i) || ($boolean eq "1")) 
   {
     return 1;
   }
@@ -2651,9 +2817,9 @@ sub error_exit
   my $error_string = shift;
   my $cgp_error_string = to_cgp_string($error_string);
   
-  select STDERR;
+  select(STDERR);
   print("* ".scalar localtime()." CGPSA Error: ".$cgp_error_string."\n");
-  select STDOUT;
+  select(STDOUT);
   
   if (our $root_conf->{redirect_stderr})
   {
@@ -2681,5 +2847,29 @@ sub to_cgp_string
   return $orig_string;
 }
     
-  
+
+# Get the expanded length of a string in CommuniGate Pro string format
+
+sub cgp_string_length
+{
+  my $cgp_string = shift;
+  $cgp_string =~ s/\e/\r\n/g;
+  $cgp_string =~ s/\t/   /g;
+  return (length $cgp_string);
+}
+
+
+# Generate the mandatory headers (CGPSA information, loop prevention)
+# with the specified string as the text of the loop prevention header,
+# with line endings "\e".
+
+sub mandatory_headers
+{
+  my $header_text = shift;
+  my $newheaders = $VERSIONHEADERNAME.": ".$VERSIONHEADERTEXT."\e";
+  $newheaders .= $root_conf->{loop_prevention_header}.
+                 ": ".$header_text."\e";
+  return $newheaders
+}
+
 # End of CGPSA
