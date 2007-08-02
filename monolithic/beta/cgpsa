@@ -601,22 +601,22 @@ sub initializeCLI
            password => $root_conf->{cgp_password}
          });
      
-       if (!$cli)
-       {
-         debug(1, "Could not connect to CLI (Error: ".
-                  $CGP::ERR_STRING.")");
-         $attempts = $attempts + 1;
-         if ($attempts < 3)
-         {
-           debug(1, "Sleeping for 20 seconds before next attempt");
-           sleep 20;
-         }
-         else
-         {
-           debug(1, "Too many failed attempts");
-           error_exit("Could not connect to CLI, exiting");
-         }
-       }
+      if (!$cli)
+      {
+        debug(1, "Could not connect to CLI (Error: ".
+                 $CGP::ERR_STRING.")");
+        $attempts = $attempts + 1;
+        if ($attempts < 3)
+        {
+          debug(1, "Sleeping for 20 seconds before next attempt");
+          sleep 20;
+        }
+        else
+        {
+          debug(1, "Too many failed attempts");
+          error_exit("Could not connect to CLI, exiting");
+        }
+      }
     }
     
     # Check to see if the installed CommuniGate supports the "mail"
@@ -653,7 +653,7 @@ sub initializeCLI
         {
           # support for blacklist/whitelist functions exists
           $root_conf->{temp_blacklist_support} = 1;
-          debug(2, "CLI and CGP support temporary blacklsting");
+          debug(2, "CLI and CGP support temporary blacklisting");
         }
       }
     }
