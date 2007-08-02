@@ -2189,6 +2189,7 @@ sub tempBlacklist
           {
             debug(7, "Error updating blacklist: ".
                      $cli->getErrMessage);
+          }
         }
         else
         {
