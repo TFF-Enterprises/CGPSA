@@ -545,7 +545,7 @@ sub mainLoop
     {
       lockStandardOutput();
       print("* Handled maximum number of requests (".
-            $root_conf->{max_requests}."), exiting.\n");
+            $root_conf->{max_requests}."), exiting\n");
       unlockStandardOutput();
       last;
     }
@@ -614,7 +614,7 @@ sub initializeCLI
          else
          {
            debug(1, "Too many failed attempts");
-           error_exit("Could not connect to CLI. Exiting.");
+           error_exit("Could not connect to CLI, exiting");
          }
        }
     }
@@ -634,6 +634,33 @@ sub initializeCLI
       # No support for the extension
       $root_conf->{route_mail_extension} = 0;
       debug(2, "CLI does not support ROUTE ... MAIL extension");
+    }
+    
+    # Check to see if the installed CommuniGate (and CLI) support the
+    # blacklist and whitelist functions
+    
+    $root_conf->{temp_blacklist_support} = 0;
+    
+    eval 
+    {
+      $cli->GetWhiteHoleIPs();
+      
+      if ($cli->isSuccess)
+      {
+        $cli->GetTempBlacklistedIPs();
+      
+        if ($cli->isSuccess)
+        {
+          # support for blacklist/whitelist functions exists
+          $root_conf->{temp_blacklist_support} = 1;
+          debug(2, "CLI and CGP support temporary blacklsting");
+        }
+      }
+    }
+    
+    if ($root_conf->{temp_blacklist_support} == 0)
+    {
+      debug(2, "CLI and CGP do not support temporary blacklisting");
     }
     
     $cli->Logout();
@@ -1515,7 +1542,7 @@ sub process_file
     if (!$cli) 
     {
       printResult("FAILURE");
-      debug(1, "CLI Error: ".$CGP::ERR_STRING.".");
+      debug(1, "CLI Error: ".$CGP::ERR_STRING);
       return;
     }
   }
@@ -1902,7 +1929,8 @@ sub process_file
     
     # do temporary blacklisting, if necessary
     
-    if ($root_conf->{use_cli} && $root_conf->{use_temp_blacklist})
+    if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} && 
+        $root_conf->{use_temp_blacklist})
     {
       tempBlacklist($msg_score, $source_host, \$cli);
     }
@@ -2064,7 +2092,8 @@ sub process_file
     # finally, do temporary blacklisting if necessary and then
     # discard the message
     
-    if ($root_conf->{use_cli} && $root_conf->{use_temp_blacklist})
+    if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} &&
+        $root_conf->{use_temp_blacklist})
     {
       tempBlacklist($msg_score, $source_host, \$cli);
     }
@@ -2090,7 +2119,7 @@ sub tempBlacklist
   
   if ($source_host eq "")
   {
-    debug(9, "No source host, skipping temporary blacklisting.");
+    debug(9, "No source host, skipping temporary blacklisting");
   }
   elsif ($msg_score < $root_conf->{temp_blacklist_score})
   {
@@ -2107,18 +2136,76 @@ sub tempBlacklist
     my $whitelist = $cli->GetWhiteHoleIPs();
     if ($cli->isSuccess)
     {
-      if (($whitelist eq $source_host) ||
-          ($whitelist =~ /$source_host\e/))
+      debug(9, "Retrieved whitelist");
+      my @whitelist_array = split(/\\e/, $whitelist);
+      foreach my $whitelist_entry (@whitelist_array)
       {
-        $is_whitelisted = 1;
+        if (($whitelist_entry =~ /^(\S+)\s*/) &&
+            ($source_host == $1))
+        {
+          $is_whitelisted = 1;
+        }
+      }
+    
+      # if the host isn't whitelisted, we can blacklist it
+    
+      if (!$is_whitelisted)
+      {
+        my $blacklist = $cli->GetTempBlacklistedIPs();
+        my $new_blacklist = "";
+        if ($cli->isSuccess)
+        {
+          debug(9, "Retrieved blacklist");
+          
+          # filter the current host out of the blacklist
+          
+          my @blacklist_array = split(",", $blacklist);
+          foreach my $blacklist_entry (@blacklist_array)
+          {
+            if (!($blacklist_entry =~ /^\[$source_host\].*/))
+            {
+              if ($new_blacklist)
+              {
+                $new_blacklist .= ",";
+              }
+              
+              $new_blacklist .= $blacklist_entry;
+            }
+          }
+          
+          debug(7, "Temporarily blacklisting ".$source_host.
+                   " for ".$root_conf->{temp_blacklist_duration}.
+                   " seconds");
+                   
+          if ($new_blacklist)
+          {
+            $new_blacklist = $new_blacklist.",";
+          }
+          
+          $new_blacklist .= "[".$source_host."]-".
+                            $root_conf->{temp_blacklist_duration};
+          $cli->SetTempBlacklistedIPs($new_blacklist);
+          if (!$cli->isSuccess)
+          {
+            debug(7, "Error updating blacklist: ".
+                     $cli->getErrMessage);
+        }
+        else
+        {
+          debug(7, "Error getting blacklist: ".
+                    $cli->getErrMessage);
+        }
+      }
+      else
+      {
+        debug(7, "Not blacklisting ".$source_host.
+                 " (whitelisted).");
       }
     }
-    
-    # if the host isn't whitelisted, we can blacklist it
-    
-    if (!$is_whitelisted)
+    else
     {
-      
+      debug(7, "Error getting whitelist: ".
+               $cli->getErrMessage);
     }
   }
 }
