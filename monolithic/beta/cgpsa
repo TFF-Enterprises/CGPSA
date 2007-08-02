@@ -656,7 +656,7 @@ sub initializeCLI
           debug(2, "CLI and CGP support temporary blacklisting");
         }
       }
-    }
+    };
     
     if ($root_conf->{temp_blacklist_support} == 0)
     {
