@@ -1930,9 +1930,10 @@ sub process_file
     # do temporary blacklisting, if necessary
     
     if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} && 
-        $root_conf->{use_temp_blacklist})
+        $root_conf->{use_temp_blacklist} &&
+        ($msg_score >= $root_conf->{temp_blacklist_score}))
     {
-      tempBlacklist($msg_score, $source_host, \$cli);
+      tempBlacklist($source_host, \$cli);
     }
   }
   elsif (($default_recipient_count == 0) &&
@@ -2093,9 +2094,10 @@ sub process_file
     # discard the message
     
     if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} &&
-        $root_conf->{use_temp_blacklist})
+        $root_conf->{use_temp_blacklist} &&
+        ($msg_score >= $root_conf->{temp_blacklist_score}))
     {
-      tempBlacklist($msg_score, $source_host, \$cli);
+      tempBlacklist($source_host, \$cli);
     }
 
     printResult("DISCARD");
@@ -2109,23 +2111,17 @@ sub process_file
   }
 }
 
-# Do temporary blacklisting, given a message score, a source host,
+# Do temporary blacklisting, given a source host
 # and a pointer to an active CLI (in that order)
 
 sub tempBlacklist
 {
-  my ($msg_score, $source_host, $cli_ptr) = @_;
+  my ($source_host, $cli_ptr) = @_;
   my $cli = ${$cli_ptr};
   
   if ($source_host eq "")
   {
     debug(9, "No source host, skipping temporary blacklisting");
-  }
-  elsif ($msg_score < $root_conf->{temp_blacklist_score})
-  {
-    debug(9, "Message score ".$msg_score." below threshold ".
-             $root_conf->{temp_blacklist_score}.", ".
-             "not blacklisting host ".$source_host);
   }
   else
   {
