@@ -627,13 +627,13 @@ sub initializeCLI
     {
       # Support for the extension
       $root_conf->{route_mail_extension} = 1;
-      debug(2, "CLI supports ROUTE ... MAIL extension");
+      debug(2, "CGP supports ROUTE ... MAIL extension");
     }
     else
     {
       # No support for the extension
       $root_conf->{route_mail_extension} = 0;
-      debug(2, "CLI does not support ROUTE ... MAIL extension");
+      debug(2, "CGP does not support ROUTE ... MAIL extension");
     }
     
     # Check to see if the installed CommuniGate (and CLI) support the
@@ -666,7 +666,7 @@ sub initializeCLI
       }
     };
     
-    if ($root_conf->{temp_blacklist_support} == 0)
+    if ($@)
     {
       debug(2, "CLI does not support temporary blacklisting");
     }
