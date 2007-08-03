@@ -655,12 +655,20 @@ sub initializeCLI
           $root_conf->{temp_blacklist_support} = 1;
           debug(2, "CLI and CGP support temporary blacklisting");
         }
+        else
+        {
+          debug(2, "CGP does not support temporary blacklisting");
+        }
+      }
+      else
+      {
+        debug(2, "CGP does not support temporary blacklisting");
       }
     };
     
     if ($root_conf->{temp_blacklist_support} == 0)
     {
-      debug(2, "CLI and CGP do not support temporary blacklisting");
+      debug(2, "CLI does not support temporary blacklisting");
     }
     
     $cli->Logout();
