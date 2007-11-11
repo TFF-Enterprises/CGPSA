@@ -2,7 +2,7 @@
 
 # $Id$
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.6b1
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.6b2
 # Copyright (C) 2002-2007 TFF Enterprises
 # Written by Daniel M. Zimmerman
 # All Rights Reserved
@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.6b1";
+our $VERSION = "1.6b2";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1233,7 +1233,8 @@ sub checkMessage
       debug(7, "Reading domain ".$domain_name.
                " SpamAssassin preferences from ".
                $domain_conf->{default_home_dir}.$sa_prefs_suffix);
-      $sa_settings_text = join($sa_settings_text, <IN>);
+      $sa_settings_text = $sa_settings_text . "\n" . 
+                          join("", <IN>);
       close(IN);
     }
   }
@@ -1249,7 +1250,8 @@ sub checkMessage
     {
       debug(7, "Reading user SpamAssassin preferences from ".
                $account_dir.$sa_prefs_suffix);
-      $sa_settings_text = join($sa_settings_text, <IN>);
+      $sa_settings_text = $sa_settings_text . "\n" . 
+                          join("", <IN>);
       close(IN);
     }
   }
@@ -1939,7 +1941,7 @@ sub process_file
     
     if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} && 
         $root_conf->{use_temp_blacklist} &&
-        ($msg_score >= $root_conf->{temp_blacklist_score}))
+        ($msg_score >= $root_conf->{temp_blacklist_threshold}))
     {
       tempBlacklist($source_host, \$cli);
     }
@@ -2103,7 +2105,7 @@ sub process_file
     
     if ($root_conf->{use_cli} && $root_conf->{temp_blacklist_support} &&
         $root_conf->{use_temp_blacklist} &&
-        ($msg_score >= $root_conf->{temp_blacklist_score}))
+        ($msg_score >= $root_conf->{temp_blacklist_threshold}))
     {
       tempBlacklist($source_host, \$cli);
     }
