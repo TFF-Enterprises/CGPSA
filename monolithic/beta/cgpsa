@@ -122,13 +122,18 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.6b2";
+our $VERSION = "1.7b1-a";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
 
 our $VERSIONHEADERNAME = "X-TFF-CGPSA-Version";
 our $VERSIONHEADERTEXT = "$VERSION";
+
+# Other constants
+
+our $SQLSTRING = "<sql>";
+our $DEFAULTSTRING = "<default>";
 
 # Set standard output to autoflush.
 
@@ -342,9 +347,13 @@ sub initialize
                "(installed SpamAssassin is version ". 
                $Mail::SpamAssassin::VERSION.")");
   }
-  else
+  elsif ($Mail::SpamAssassin::VERSION < 3.003)  # prior to 3.3.0
   {
     $root_conf->{spamassassin_api_version} = 3;
+  }
+  else # 3.3.0 or higher
+  {
+    $root_conf->{spamassassin_api_version} = 3.3;
   }
   
   $spamassassin = Mail::SpamAssassin->new
@@ -1014,18 +1023,35 @@ sub checkMessageAddHeader
       my $rewritten_mail_scalar = $status->rewrite_mail();
       
       $newheaders = "";
+      my $sa_headers;
       my $headerlist;
-        
+      
       if ($status->is_spam())
       {
-        $headerlist = $status->{conf}->{headers_spam};
+        $sa_headers = $status->{conf}->{headers_spam};
       }
       else
       {
-        $headerlist = $status->{conf}->{headers_ham};
+        $sa_headers = $status->{conf}->{headers_ham};
       }
 
       my $rewritten_mail = $spamassassin->parse($rewritten_mail_scalar);
+      
+      if ($root_conf->{spamassassin_api_version} == 3.3)
+      {
+        # SpamAssassin 3.3 does something different with its header structure
+        
+        foreach my $hf_ref (@{$sa_headers}) 
+        {
+          my($hfname, $hfbody) = @$hf_ref;
+          $headerlist->{$hfname} = $hfbody;
+        }
+      }
+      else
+      {
+        $headerlist = $sa_headers;
+      }
+      
       foreach my $header (keys %{$headerlist})
       {
         $newheaders .= 
@@ -1191,13 +1217,14 @@ sub checkMessage
   my $domain_conf = $root_conf;
   my $user_conf = $root_conf;
   our $sa_prefs_suffix;
-    
+  our $DEFAULTSTRING;
+  
   if ($root_conf->{cli_account_info})
   { 
     # initialize domain/user configurations if necessary
 
     $domain_conf = $domain_conf_cache{$domain_name};
-    if ($account_name ne "<default>")
+    if ($account_name ne $DEFAULTSTRING)
     {
       $user_conf = $user_conf_cache{$account_name};
     }
@@ -1271,8 +1298,10 @@ sub checkMessage
   # Now, if SQL user prefs are enabled, let's load them
   
   if ($domain_conf->{allow_user_prefs} && $user_conf->{use_user_prefs} &&
-      $user_conf->{sql_user_prefs})
+      $user_conf->{sql_user_prefs} && $account_name ne $DEFAULTSTRING)
   {
+    debug(7, "Reading user SpamAssassin scores from SQL for user ".
+             $account_name);
     $spamassassin->load_scoreonly_sql($account_name);
   }
   
@@ -1732,7 +1761,8 @@ sub process_file
                           ", account name ".$host.
                           ", effective home directory ".$account_dir);
                 
-                    if ($account_dir eq $root_conf->{default_home_dir})
+                    if ($account_dir eq $root_conf->{default_home_dir} &&
+                        !$domain_conf->{sql_user_prefs})
                     {
                       # use systemwide SpamAssassin prefs
                       debug(7, "Using system default SpamAssassin ".
@@ -1748,7 +1778,8 @@ sub process_file
                           "";
                       }
                     }
-                    elsif ($account_dir eq $domain_conf->{default_home_dir})
+                    elsif ($account_dir eq $domain_conf->{default_home_dir} &&
+                           !$domain_conf->{sql_user_prefs})
                     {
                       # use domain SpamAssassin prefs
                       debug(7, "Using domain default SpamAssassin ". 
@@ -1771,6 +1802,14 @@ sub process_file
                                "settings for ".$host);
                       $custom_recipient_accts{$local_address} = $host;
                       $custom_recipient_dirs{$local_address} = $account_dir;
+                    }
+                    elsif ($domain_conf->{sql_user_prefs})
+                    {
+                      # attempt to use SQL SpamAssassin prefs
+                      debug(7, "Attempting to use SQL SpamAssassin " .
+                               "scores for ".$host);
+                      $custom_recipient_accts{$local_address} = $host;
+                      $custom_recipient_dirs{$local_address} = $SQLSTRING;
                     }
                     else
                     {
@@ -2005,7 +2044,7 @@ sub process_file
         
         my $is_spam = 0;
         $rewritten_msg = 
-          checkMessage(\@msglines, "<default>", $domain_name, "<default>", 
+          checkMessage(\@msglines, $DEFAULTSTRING, $domain_name, $DEFAULTSTRING, 
                        $domain_conf->{default_home_dir}, 
                        \$is_spam, \$msg_score);
 
@@ -2056,9 +2095,18 @@ sub process_file
       my $account_dir = $custom_recipient_dirs{$local_address};
       my $user_conf = $user_conf_cache{$account_name};
       my $is_spam = 0;
-      debug(6, "Running SpamAssassin with settings from ".
+      
+      if ($account_dir eq $SQLSTRING)
+      {
+        debug(6, "Running SpamAssassin with settings from SQL ".
+                 " for local address ".$local_address);
+      }
+      else
+      {
+        debug(6, "Running SpamAssassin with settings from ".
                $account_dir.$sa_prefs_suffix.
                " for local address ".$local_address);
+      }
       my $domain_name = "";
       if ($account_name =~ /^\S*@(\S*)$/)      
       {
