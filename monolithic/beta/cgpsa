@@ -122,7 +122,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.7b1-a";
+our $VERSION = "1.7b1";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
