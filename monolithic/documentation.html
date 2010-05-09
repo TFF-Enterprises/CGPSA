@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.5</h1>
+<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.7</h1>
 <h2>Copyright &copy; 2002-2010 TFF Enterprises<br/>
 Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
 All Rights Reserved</h2>
@@ -38,10 +38,10 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a>, 
-released 23 August 2006.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a>, 
+released 9 May 2010.</p>
 
-<p>The current <a href="beta/">beta test version</a> of CGPSA is 1.7b1, released 5 February 2010.</p>
+<p>There is no current testing version of CGPSA.</p>
 
 <h2>Documentation</h2>
 
@@ -119,7 +119,7 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
-<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 2.6 or higher</li>
+<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 3.0 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
 below and in SpamAssassin's documentation).</li>
@@ -144,7 +144,7 @@ auxiliary programs you want SpamAssassin to use, such as Razor and DCC.
 <a href="http://www.cpan.org/">Perl</a> is a prerequisite for
 SpamAssassin. Instructions for installing SpamAssassin on Win32
 operating systems are available <a
-href="http://64.242.36.76/howtosa.html">here</a>. On Win32,
+href="http://wiki.apache.org/spamassassin/InstallingOnWindows">here</a>. On Win32,
 you <i>must</i> add <code>RES_NAMESERVERS</code> to your system environment
 variables to enable DNS lookups under Perl (this is discussed in the
 installation instructions for SpamAssassin).<br/><br/></li>
@@ -348,32 +348,21 @@ your own risk.</p>
 
 <h3 id="license">License and Fees</h3>
 
-<p>The final licensing model for CGPSA has not been determined. It has
-very similar functionality to some existing commercial products, and
-significant effort has been put into it; it would thus be good to
-receive something in return. However, charging licensing fees even
-remotely similar to those charged for the aforementioned products makes
-no sense. It is likely that a license fee directly correlated to the
-license fee of CommuniGate Pro will be charged for CGPSA at some point
-in the future (that is, you pay a higher fee if you run a CommuniGate
-Pro server licensed for a higher number of users); however, such a fee
-will be similar to the CommuniGate Pro license fee (a one-time fee
-including updates for some period of time) rather than being an annual
-fee, and there will be no licensing based on message traffic volume.</p>
+<p>CGPSA is non-commercial software, even though it has similar functionality to some existing commercial products. If you find it useful, feel free to send me something for it (email <a href="cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a> if you need information on how to do so). I also do CGPSA installations on a flat-fee basis.</p>
 
-<p>In the meantime, CGPSA is not to be redistributed without explicit
+<p>Another way to provide some support for CGPSA's development is to do your <a href="http://www.tffenterprises.com/amazon/">Amazon.com</a> shopping via the link in this sentence.</p>
+
+<p>CGPSA is not to be redistributed without explicit
 permission. Its source code may not be used in any other products, in
 verbatim or modified form, whether or not the product is open-source.
 You may of course modify the source code in any way you like for use on
 your own system.</p>
 
-<p>If you want to provide some little bit of support for CGPSA's development, you can do your shopping at <a href="http://www.tffenterprises.com/amazon/">Amazon</a> via the link in this sentence.</p>
-
 <hr/>
 
 <h3 id="bugs">Bug Reports, Feature Requests, and the Like</h3>
 
-<p>Suggestions for feature improvements and bug fixes will gladly be
+<p>Suggestions for feature improvements and bug fixes are gladly
 accepted. There is a mailing list for discussion about this filter,
 <code>cgpsa-discuss@tffenterprises.com</code>; this mailing list is the
 primary channel for support, discussion of feature requests and bug
@@ -395,6 +384,50 @@ file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a> - 9 May 2010</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>CGPSA now requires SpamAssassin 3.0 or higher (and is compatible with SpamAssassin 3.3).</li>
+
+<li>Added options to set a score ("temp_blacklist_score") and duration ("temp_blacklist_duration") for temporary blacklisting, using the temporary blacklisting facilities of CommuniGate Pro releases that support it (thanks to Duane Hill for initial code).</li>
+
+<li>Added the ability to turn on spamd-style logging ("spamd_style_log") (thanks to Duane Hill for initial code).</li>
+
+<li>Added a setting for the maximum message length to scan ("max_scan_length"), instead of the previous 128K hard-coded limit (thanks to Duane Hill for initial code).</li>
+
+<li>Added a setting for the maximum length of a response to return to CommuniGate Pro ("cgp_max_response_length") (thanks to Duane Hill for initial code).</li>
+
+<li>Added header reduction and header inclusion settings ("header_to_reduce", "headers_to_include") to handle long sets of headers in an orderly fashion (thanks to Duane Hill for initial code).</li>
+
+<li>Added additional support for SQL-based user preferences.</li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+<li>Improved compatibility with SPF checking (thanks to Duane Hill for initial code).</li>
+
+<li>Extended the "sa_debug" parameter to enable the specification of specific SpamAssassin log facilities (such as "check") (thanks to Duane Hill for initial code).</li>
+
+</ul>
+
+<p>Bug Fixes</p>
+<ul>
+
+<li>Fixed a long-standing bug where user-level SpamAssassin preferences would not be properly read and incorporated into the SpamAssassin preference set being used.</li>
+
+</ul>
+
+<p>Known Issues</p>
+<ul>
+
+<li>Same as for Version 1.5 (all carried forward from Version 1.1)</li>
+
+</ul>
+
+</dd>
 
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a> - 23 August 2006</dt>
 <dd>
@@ -1049,7 +1082,7 @@ href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
 height="31" width="88" /></a> Last modified by <a
 href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-5 February 2010<br />
+9 May 2010<br />
 </address>
 </body>
 </html>
