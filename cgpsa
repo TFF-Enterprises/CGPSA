@@ -1994,7 +1994,7 @@ sub process_file
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " from owner.");
-        continue;
+        next;
       }
 
       # if the list only allows posting from the owner, reject the message
@@ -2020,18 +2020,18 @@ sub process_file
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " with permissive post policy.");
-        continue;
+        next;
       }
 
       # if the return path is not subscribed to the list, or is prohibited, 
       # reject the message
 
       my %subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
-      if (%subscriber_info && (%subscriber_info{"mode"} ne "prohibited")) 
+      if (scalar(%subscriber_info) && (%subscriber_info{"mode"} ne "prohibited")) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " from authorized poster " . $return_path);
-        continue;
+        next;
       }
 
       if ($cli)
