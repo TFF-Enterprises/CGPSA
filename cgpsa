@@ -1960,8 +1960,13 @@ sub process_file
 
       # get information about the list
       
-      my %list_settings = $cli->GetList($list_address);
-      if (!$cli->isSuccess()) {
+      my $list_settings;
+      if ($list_settings = $cli->GetList($list_address))
+      {
+        # we've read the list settings correctly
+      }
+      else
+      {
         # this should never happen because we got routed to the list, 
         # but if it does, let's play it safe and abort message processing
         if ($cli)
@@ -1991,7 +1996,7 @@ sub process_file
 
       if (defined($return_path_route) && 
           ($return_path_route->[0] eq "LOCAL") && 
-          ($return_path_route->[1] eq $list_settings{"Owner"})) 
+          ($return_path_route->[1] eq %$list_settings{"Owner"})) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " from owner.");
@@ -2000,7 +2005,7 @@ sub process_file
 
       # if the list only allows posting from the owner, reject the message
 
-      if (%list_settings{"Postings"} eq "from owner")
+      if (%$list_settings{"Postings"} eq "from owner")
       {
         if ($cli)
         {
@@ -2016,28 +2021,33 @@ sub process_file
       # if the list allows postings from "anybody" or "moderate guests", 
       # allow the message
 
-      if ((%list_settings{"Postings"} eq "anybody") ||
-          (%list_settings{"Postings"} eq "moderate guests")) 
+      if ((%$list_settings{"Postings"} eq "anybody") ||
+          (%$list_settings{"Postings"} eq "moderate guests")) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " with permissive post policy.");
         next;
       }
 
-      # if the return path is not subscribed to the list, or is prohibited, 
-      # reject the message
+      # check the subscription status
 
-      my %subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
-
-      debug(4, "returned subscriber info is ConfirmationID " . %subscriber_info{"ConfirmationID"} . " and mode " . %subscriber_info{"mode"});
+      my $subscriber_info;
       
-      if ((%subscriber_info{"ConfirmationID"} ne "") && 
-          (%subscriber_info{"mode"} ne "prohibited")) 
+      if ($subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path))
       {
-        debug(4, "Accepting message to mailing list " . $list_address . 
-                 " from authorized poster " . $return_path);
-        next;
+        if (%$subscriber_info{"mode"} ne "prohibited")
+        {
+          # at this point, it's a legit mailing list subscriber that isn't 
+          # prohibited from posting
+
+          debug(4, "Accepting message to mailing list " . $list_address . 
+                   " from authorized poster " . $return_path);
+          next;
+        }
       }
+
+      # if we reach here, either we got no subscriber info, 
+      # or the subscriber was prohibited
 
       if ($cli)
       {
