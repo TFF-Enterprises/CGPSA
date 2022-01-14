@@ -1689,7 +1689,9 @@ sub process_file
                 # add this recipient to list_recipients so we can check for
                 # backscatter later
 
-                push(@remote_recipients, $local_address);
+                debug(7, "mailing list address detected, adding for " .
+                         "later backscatter check");
+                push(@list_recipients, $local_address);
               }
 
               if ($domain_conf->{use_cgpsa} && !$all_destination &&
