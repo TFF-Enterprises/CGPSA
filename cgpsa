@@ -2031,19 +2031,16 @@ sub process_file
 
       # check the subscription status
 
-      my $subscriber_info;
-      
-      if ($subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path))
+      my $subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
+      if (%$subscriber_info{"ConfirmationID"} &&
+          (%$subscriber_info{"mode"} ne "prohibited"))
       {
-        if (%$subscriber_info{"mode"} ne "prohibited")
-        {
-          # at this point, it's a legit mailing list subscriber that isn't 
-          # prohibited from posting
+        # at this point, it's a legit mailing list subscriber that isn't 
+        # prohibited from posting
 
-          debug(4, "Accepting message to mailing list " . $list_address . 
-                   " from authorized poster " . $return_path);
-          next;
-        }
+        debug(4, "Accepting message to mailing list " . $list_address . 
+                 " from authorized poster " . $return_path);
+        next;
       }
 
       # if we reach here, either we got no subscriber info, 
