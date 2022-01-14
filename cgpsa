@@ -2033,7 +2033,7 @@ sub process_file
 
       my $subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
       if (%$subscriber_info{"ConfirmationID"} &&
-          (%$subscriber_info{"mode"} ne "prohibited"))
+          (%$subscriber_info{"posts"} ne "prohibited"))
       {
         # at this point, it's a legit mailing list subscriber that isn't 
         # prohibited from posting
