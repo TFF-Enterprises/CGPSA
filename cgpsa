@@ -1988,8 +1988,9 @@ sub process_file
         $return_path_route = $cli->Route("\"$return_path\"");
       }
 
-      if (defined($return_path_route) && $return_path_route->[0] eq "LOCAL" && 
-          $return_path_route->[1] eq $list_settings{"Owner"}) 
+      if (defined($return_path_route) && 
+          ($return_path_route->[0] eq "LOCAL") && 
+          ($return_path_route->[1] eq $list_settings{"Owner"})) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " from owner.");
@@ -2014,8 +2015,8 @@ sub process_file
       # if the list allows postings from "anybody" or "moderate guests", 
       # allow the message
 
-      if (%list_settings{"Postings"} eq "anybody" ||
-          %list_settings{"Postings"} eq "moderate guests") 
+      if ((%list_settings{"Postings"} eq "anybody") ||
+          (%list_settings{"Postings"} eq "moderate guests")) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " with permissive post policy.");
@@ -2026,7 +2027,7 @@ sub process_file
       # reject the message
 
       my %subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
-      if (%subscriber_info && %subscriber_info{"mode"} ne "prohibited") 
+      if (%subscriber_info && (%subscriber_info{"mode"} ne "prohibited")) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
                  " from authorized poster " . $return_path);
