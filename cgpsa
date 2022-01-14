@@ -1971,8 +1971,8 @@ sub process_file
         }
         debug(4, "Rejecting message to mailing list " . $list_address . 
                  " because list info is unavailable.");
-        printResult("ERROR could not get mailing list information for " . 
-                    $list_address);
+        printResult("ERROR \"could not get mailing list information for " . 
+                    $list_address . "\"");
         return;
       }
 
@@ -2009,7 +2009,7 @@ sub process_file
         }
         debug(4, "Rejecting message to mailing list " . $list_address . 
                  " from unauthorized poster " . $return_path);
-        printResult("ERROR you are not authorized to post to this mailing list");
+        printResult("ERROR \"you are not authorized to post to this mailing list\"");
         return;
       }
 
@@ -2044,8 +2044,8 @@ sub process_file
       }
 
       debug(4, "Rejecting message to mailing list " . $list_address .
-               "from unauthorized poster " . $return_path);
-      printResult("ERROR you are not subscribed to this mailing list");
+               " from unauthorized poster " . $return_path);
+      printResult("ERROR \"you are not subscribed to this mailing list\"");
       return;
     } 
   }
