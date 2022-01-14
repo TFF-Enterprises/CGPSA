@@ -2029,7 +2029,9 @@ sub process_file
 
       my %subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
 
-      if (%subscriber_info{"ConfirmationID"} && 
+      debug(4, "returned subscriber info is ConfirmationID " . %subscriber_info{"ConfirmationID"} . " and mode " . %subscriber_info{"mode"});
+      
+      if ((%subscriber_info{"ConfirmationID"} ne "") && 
           (%subscriber_info{"mode"} ne "prohibited")) 
       {
         debug(4, "Accepting message to mailing list " . $list_address . 
