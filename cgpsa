@@ -1990,7 +1990,7 @@ sub process_file
       # get information about the list
       
       my %list_settings = $cli->GetList($list_address);
-      if (!%cli->isSuccess()) {
+      if (!$cli->isSuccess()) {
         # this should never happen because we got routed to the list, 
         # but if it does, let's play it safe and abort message processing
         if ($cli)
