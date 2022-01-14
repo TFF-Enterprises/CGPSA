@@ -1691,7 +1691,8 @@ sub process_file
 
                 debug(7, "mailing list address detected, adding for " .
                          "later backscatter check");
-                push(@list_recipients, $local_address);
+                push(@list_recipients, $host);  
+                # $host is the already-routed address here
               }
 
               if ($domain_conf->{use_cgpsa} && !$all_destination &&
@@ -1956,35 +1957,35 @@ sub process_file
     foreach (@list_recipients)
     {
       my $list_address = $_;
-      my $list_route;
+      # my $list_route;
 
-      if ($root_conf->{route_mail_extension})
-      {
-        $list_route = $cli->Route("\"$return_path\" MAIL");
-      }
-      else
-      {
-        $list_route = $cli->Route("\"$return_path\"");
-      }
+      # if ($root_conf->{route_mail_extension})
+      # {
+      #   $list_route = $cli->Route("\"$return_path\" MAIL");
+      # }
+      # else
+      # {
+      #   $list_route = $cli->Route("\"$return_path\"");
+      # }
 
-      if (scalar($list_route))
-      {
-        $list_address = $list_route->[1];
-      }
-      else
-      {
-        # this should never happen because we got routed to the list, 
-        # but if it does, let's play it safe and abort message processing
-        if ($cli)
-        {
-          $cli->Logout();
-          undef $cli;
-        }
-        debug(4, "Rejecting message to mailing list " . $list_address . 
-                 " because it was unroutable.");
-        printResult("ERROR unroutable list address " . $list_address);
-        return;
-      }
+      # if (scalar($list_route))
+      # {
+      #   $list_address = $list_route->[1];
+      # }
+      # else
+      # {
+      #   # this should never happen because we got routed to the list, 
+      #   # but if it does, let's play it safe and abort message processing
+      #   if ($cli)
+      #   {
+      #     $cli->Logout();
+      #     undef $cli;
+      #   }
+      #   debug(4, "Rejecting message to mailing list " . $list_address . 
+      #            " because it was unroutable.");
+      #   printResult("ERROR unroutable list address " . $list_address);
+      #   return;
+      # }
 
       # get information about the list
       
