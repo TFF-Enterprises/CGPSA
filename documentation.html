@@ -1,5 +1,5 @@
 <?xml version="1.1" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "xhtml11.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <!-- $Id$ -->
 <html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -8,15 +8,14 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.7</h1>
-<h2>Copyright &copy; 2002-2010 TFF Enterprises<br/>
-Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
-All Rights Reserved</h2>
+<h1>CGPSA - A Spam Filter for <a href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.8</h1>
+<h2>Copyright &copy; 2002-2022 TFF Enterprises<br/>
+Written by <a href="https://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a></h2>
 
 <p>CGPSA works in concert with <a
-href="http://www.spamassassin.org/">SpamAssassin</a>&trade; software
+href="http://spamassassin.apache.org/">SpamAssassin</a>&trade; software
 to scan email messages distributed by a <a
-href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg;
+href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg;
 Pro</a> server. The filter works efficiently, by directly using
 the SpamAssassin API. It does not rely on a daemon process such as
 spamd or on the execution of shell scripts (as the usual process for
@@ -26,22 +25,29 @@ be used with multiple CommuniGate Pro enqueuer threads.</p>
 <p>CGPSA supports all features of SpamAssassin, including such
 functionality as the use of <a
 href="http://razor.sourceforge.net/">Razor</a>, <a
-href="http://www.rhyolite.com/anti-spam/dcc/">DCC</a>, Bayesian
+href="http://rhyolite.com/dcc/">DCC</a>, Bayesian
 learning, and auto-whitelists. All these features are controlled through
 SpamAssassin's regular configuration files. For more information on
 SpamAssassin features and configuration, see the SpamAssassin <a
-href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
+href="http://spamassassin.apache.org/doc.html">documentation</a>.</p>
+
+<p>CGPSA also can also attempt to minimize backscatter from the
+CommuniGate Pro mailing list module, which lacks backscatter reduction
+features itself. See the documentation in the configuration file for more 
+details.</p>
 
 <h3>Downloads</h3> 
 
 <p>The most current (release) version of CGPSA can always be downloaded
-from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
-http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
+from <a href="https://www.tffenterprises.com/cgpsa/cgpsa.tgz">
+https://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a>, 
-released 9 May 2010.</p>
+href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8.tgz">1.8</a>, 
+released 22 January 2022.</p>
 
 <p>There is no current testing version of CGPSA.</p>
+
+<p>Source code is available on <a href="https://github.com/TFF-Enterprises/CGPSA">GitHub</a>.</p>
 
 <h2>Documentation</h2>
 
@@ -119,7 +125,7 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
-<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 3.0 or higher</li>
+<li><a href="http://spamassassin.apache.org/">SpamAssassin</a> version 3.0 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
 below and in SpamAssassin's documentation).</li>
@@ -137,7 +143,7 @@ href="#bugs">Bug Reports, Feature Requests and the Like</a>).</p>
 
 <ol>
 
-<li>Install <a href="http://www.spamassassin.org/">SpamAssassin</a> on
+<li>Install <a href="http://spamassassin.apache.org/">SpamAssassin</a> on
 your system. The way to do this is platform dependent - on FreeBSD, for
 example, you might use the FreeBSD Ports system. Also install any
 auxiliary programs you want SpamAssassin to use, such as Razor and DCC.
@@ -151,7 +157,7 @@ installation instructions for SpamAssassin).<br/><br/></li>
 
 <li>Verify that the path in the first line of the <code>cgpsa</code>
 script points to the Perl executable on your system. If you have Perl
-in a different location (such as <code>/usr/local/bin/perl</code> or
+in a different location (such as <code>/usr/bin/perl</code> or
 <code>/opt/bin/perl</code>), change the line accordingly. On Win32, this step is not required.<br/><br/></li>
 
 <li>Verify that the <code>$cgp_base</code> variable (listed under
@@ -185,21 +191,24 @@ step for details).<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must install the <a
-href="http://www.stalker.com/CGPerl/">CommuniGate Pro CLI Perl
-Module</a>, <code>CLI.pm</code>. A version of <code>CLI.pm</code> is
-included with the CGPSA distribution. You can copy it to any of your
-system's Perl @INC directories, or just place it in the directory where
-you've installed <code>cgpsa</code>. <code>CLI.pm</code> requires the <a
+href="http://www.communigate.com/CGPerl/">CommuniGate Pro CLI Perl
+Module</a>, <a
+href="http://search.cpan.org/search?module=CGP::CLI">CGP::CLI</a>. You
+can install it from <a href="http://www.cpan.org/">CPAN</a> directly,
+and it should take care of all its dependencies. Alternatively, a
+version of <code>CLI.pm</code> is included with the CGPSA distribution;
+you can copy it to any of your system's Perl @INC directories, or just
+place it in the directory where you've installed the <code>cgpsa</code>
+script. CGP::CLI requires the <a
 href="http://search.cpan.org/search?module=Digest::MD5">Digest::MD5</a>
 Perl module; if you do not have it installed on your system, download
 and install it (or use the <a href="http://www.cpan.org/">CPAN</a>
 module to install it). If you have installed other scripts on your
 system that require the CommuniGate Pro CLI, you may already have
-installed <code>CLI.pm</code>; you do not need to reinstall it for
-CGPSA, though you should ensure that it's a recent version. If you are
-running in headers-only mode, or in full-featured mode without the CLI,
-you need not install <code>CLI.pm</code> for CGPSA to
-function.<br/><br/></li>
+installed CGP::CLI; you do not need to reinstall it for CGPSA, though
+you should ensure that it's a recent version. If you are running in
+headers-only mode, or in full-featured mode without the CLI, you need
+not install CGP::CLI for CGPSA to function.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must create a CommuniGate Pro account with PWD access (as
@@ -208,11 +217,12 @@ specified in your <code>cgpsa.conf</code>. This user must have
 administrative access to all the domains for which you will be using
 CGPSA (the easiest way to do this is to give it access to "modify and
 monitor everything"; at minimum, it should have access to modify "server
-and module settings" and "all domains and accounts settings"). Enable a
-number of PWD connections greater than the number of enqueuer threads
-used by your server. See the configuration file for details. If you are
-running in headers-only mode, or in full-featured mode without the CLI,
-you need not create an account for PWD access.<br/><br/></li>
+and module settings" and "all domains and accounts settings", but it needs
+access to "do everything" in order to modify the temporary blacklist). 
+Enable a number of PWD connections greater than the number of enqueuer 
+threads used by your server. See the configuration file for details. If 
+you are running in headers-only mode, or in full-featured mode without 
+the CLI, you need not create an account for PWD access.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, and your CommuniGate Pro setup has IP addresses specifically
@@ -289,12 +299,12 @@ much of it isn't too useful).</p>
 
 <h3 id="upgrading">Upgrading</h3>
 
-<p>To upgrade from a previous version of CGPSA, perform the following steps:</p>
+<p>To upgrade from a previous version of CGPSA, perform the following 
+steps:</p>
 
 <ol>
 
-<li>Copy the new <code>cgpsa</code> and <code>CLI.pm</code> over the
-ones you currently have installed.<br/><br/></li>
+<li>Copy the new <code>cgpsa</code> over the one you currently have installed.<br/><br/></li>
 
 <li>Compare the configuration file (<code>cgpsa.conf</code>) that came
 with the new CGPSA to the configuration file you currently have
@@ -309,9 +319,9 @@ described in step 6 of the installation instructions and in the included
 <li>Restart CGPSA. There are two ways to do this. If you have
 "Auto-Restart" enabled for CGPSA in the CommuniGate Pro "Helper
 Settings", you can manually kill the running CGPSA process(es); this
-done with a command such as <code>killall cgpsa</code> (on Linux) or
+is done with a command such as <code>killall cgpsa</code> (on Linux) or
 <code>pkill cgpsa</code> (on Solaris), or through a graphical interface
-such as Mac OS X's "Activity Monitor" or Windows' "Task Manager". If you
+such as macOS's "Activity Monitor" or Windows' "Task Manager". If you
 cannot kill the running CGPSA processes, you can restart CGPSA using the
 "Helper Settings" page of the CommuniGate Pro web administration
 interface. In the "Content Filtering" section you made for CGPSA,
@@ -348,15 +358,12 @@ your own risk.</p>
 
 <h3 id="license">License and Fees</h3>
 
-<p>CGPSA is non-commercial software, even though it has similar functionality to some existing commercial products. If you find it useful, feel free to send me something for it (email <a href="cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a> if you need information on how to do so). I also do CGPSA installations on a flat-fee basis.</p>
+<p>CGPSA is non-commercial software, even though it has similar functionality
+to some existing commercial products. If you find it useful, feel free to 
+send me something for it (email <a href="cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a> if you need information on how to do so). I also do CGPSA installations on a flat-fee basis.</p>
 
-<p>Another way to provide some support for CGPSA's development is to do your <a href="http://www.tffenterprises.com/amazon/">Amazon.com</a> shopping via the link in this sentence.</p>
-
-<p>CGPSA is not to be redistributed without explicit
-permission. Its source code may not be used in any other products, in
-verbatim or modified form, whether or not the product is open-source.
-You may of course modify the source code in any way you like for use on
-your own system.</p>
+<p>CGPSA is licensed under the 3-Clause BSD License. See the
+<code>LICENSE.md</code> file for details.</p>
 
 <hr/>
 
@@ -385,7 +392,53 @@ file).</p>
 
 <dl>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a> - 9 May 2010</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8.tgz">1.8</a> - 22 January 2022</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>CGPSA has been licensed under the 3-Clause BSD License.</li>
+
+<li>CGPSA has been verified to work with current versions of SpamAssassin
+(which is up to version 3.4.6 as of this writing).</li>
+
+<li>Added an option to prevent backscatter from CommunGate Pro mailing lists
+("prevent_backscatter"). This only works if CGPSA is run in a synchronous
+server-wide rule (see the option documentation for details), and should 
+eliminate backscatter that results from the LIST module bouncing email sent
+to mailing lists from unauthorized addresses.</li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+
+<li>Changed the Perl path at the top of the CGPSA script to 
+<code>/usr/local/bin/perl</code>, to better reflect the reality of the way
+Perl is packaged on most systems these days.</li>
+
+<li>Cleaned up the documentation to reflect the current URLs for various
+referenced products (amazing how things change in a decade).</li>
+
+<li>Updated the version of CLI.pm included in the CGPSA distribution.</li>
+
+</ul>
+
+<p>Bug Fixes</p>
+<ul>
+
+<li>None</li>
+
+</ul>
+
+<p>Known Issues</p>
+<ul>
+
+<li>Same as for Version 1.7 (all carried forward from Version 1.1)</li>
+
+</ul>
+</dd>
+
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a> - 9 May 2010</dt>
 <dd>
 <p>Major Changes</p>
 <ul>
@@ -429,7 +482,7 @@ file).</p>
 
 </dd>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a> - 23 August 2006</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_5.tgz">1.5</a> - 23 August 2006</dt>
 <dd>
 <p>Major Changes</p>
 <ul>
@@ -465,7 +518,7 @@ of DMA spam filing and account detail (that is, an address of the form "foo+bar@
 </ul>
 </dd>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a> - 2 January 2005</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_4.tgz">1.4</a> - 2 January 2005</dt>
 <dd>
 <p>Major Changes</p>
 <ul>
@@ -498,7 +551,7 @@ changed to 8.<br/><br/></li>
 </ul>
 </dd>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_5.tgz">1.3.5</a> - 2 December 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_5.tgz">1.3.5</a> - 2 December 2004</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -508,7 +561,7 @@ changed to 8.<br/><br/></li>
 </ul>
 </dd>
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_4.tgz">1.3.4</a> - 5 August 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_4.tgz">1.3.4</a> - 5 August 2004</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -524,7 +577,7 @@ release, but will not work in version 1.4.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_3.tgz">1.3.3</a> - 19 June 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_3.tgz">1.3.3</a> - 19 June 2004</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -536,7 +589,7 @@ if there were no corresponding user CGPSA preferences.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_2.tgz">1.3.2</a> - 24 April 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_2.tgz">1.3.2</a> - 24 April 2004</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -548,7 +601,7 @@ CGPSA is incompatible with SpamAssassin 3.x releases.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_1.tgz">1.3.1</a> - 10 April 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3_1.tgz">1.3.1</a> - 10 April 2004</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -579,7 +632,7 @@ of spam discarded by CGPSA's auto-discard functionality.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3.tgz">1.3</a> - 28 March 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_3.tgz">1.3</a> - 28 March 2004</dt>
 <dd>
 <p>Major Changes</p>
 <ul>
@@ -636,7 +689,7 @@ log information.</li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_8.tgz">1.2.8</a> - 12 February 2004</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_8.tgz">1.2.8</a> - 12 February 2004</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -648,7 +701,7 @@ if the CLI.pm perl module was installed in certain locations.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - 31 December 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_7.tgz">1.2.7</a> - 31 December 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -667,7 +720,7 @@ necessary.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_6.tgz">1.2.6</a> - 26 December 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_6.tgz">1.2.6</a> - 26 December 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -680,7 +733,7 @@ filesystem.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_5.tgz">1.2.5</a> - 13 December 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_5.tgz">1.2.5</a> - 13 December 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -705,7 +758,7 @@ in 1.2.4, to improve readability.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_4.tgz">1.2.4</a> - 3 December 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_4.tgz">1.2.4</a> - 3 December 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -731,7 +784,7 @@ usage explosions in previous versions of CGPSA.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_3.tgz">1.2.3</a> - 14 November 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_3.tgz">1.2.3</a> - 14 November 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -743,7 +796,7 @@ in version 1.2.2 (and caused CGPSA to crash).<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_2.tgz">1.2.2</a> - 14 November 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_2.tgz">1.2.2</a> - 14 November 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -772,7 +825,7 @@ users).<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a> - 2 October 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2_1.tgz">1.2.1</a> - 2 October 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -785,7 +838,7 @@ users).<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a> - 17 September 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_2.tgz">1.2</a> - 17 September 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -821,7 +874,7 @@ CGPSA.</li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_1.tgz">1.1</a> - 27 July 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_1.tgz">1.1</a> - 27 July 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -886,7 +939,7 @@ limitations in the older Text::Wrap code.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_8.tgz">1.0.8</a> - 18 June 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_8.tgz">1.0.8</a> - 18 June 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -899,7 +952,7 @@ requests.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a> - 17 June 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_7.tgz">1.0.7</a> - 17 June 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -923,7 +976,7 @@ model for such mail.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_6.tgz">1.0.6</a> - 5 May 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -952,7 +1005,7 @@ accurately reflect its default value.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_5.tgz">1.0.5</a> - 14 April 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_5.tgz">1.0.5</a> - 14 April 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -981,7 +1034,7 @@ read from the configuration file.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_4.tgz">1.0.4</a> - 2 April 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_4.tgz">1.0.4</a> - 2 April 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -1000,7 +1053,7 @@ read from the configuration file.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_3.tgz">1.0.3</a> - 30 March 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_3.tgz">1.0.3</a> - 30 March 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -1024,7 +1077,7 @@ read from the configuration file.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_2.tgz">1.0.2</a> - 27 March 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_2.tgz">1.0.2</a> - 27 March 2003</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
@@ -1038,7 +1091,7 @@ read from the configuration file.<br/><br/></li>
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_1.tgz">1.0.1</a> - 27 March 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0_1.tgz">1.0.1</a> - 27 March 2003</dt>
 <dd>
 <p>Changes</p>
 <ul>
@@ -1052,7 +1105,7 @@ installed if CGPSA is running with "use_cli" set to false (or in headers-only mo
 </dd>
 
 
-<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0.tgz">1.0</a> - 23 March 2003</dt>
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_0.tgz">1.0</a> - 23 March 2003</dt>
 <dd>
 <p>Initial Release Version</p>
 </dd>
@@ -1073,16 +1126,15 @@ the easiest things in the world to maintain).</p>
 
 <h3 id="legal">Legal Stuff</h3>
 
-<p>CommuniGate is a registered trademark of Stalker Software, Inc.</p>
+<p>CommuniGate is a registered trademark of CommuniGate Systems.</p>
+<p>CGPSA is licensed under the 3-clause BSD license; see the 
+<code>LICENSE.md</code> file in the CGPSA distribution for more details.</p> 
 
 <hr/>
 
-<address><a
-href="http://validator.w3.org/check/referer"><img
-src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
-height="31" width="88" /></a> Last modified by <a
-href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-9 May 2010<br />
+<address><a href="http://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fwww.tffenterprises.com%2Fcgpsa%2F"><img src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!" height="31" width="88" /></a>
+<a href="http://validator.w3.org/check?uri=https%3A%2F%2Fwww.tffenterprises.com%2Fcgpsa%2F"><img src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!" height="31" width="88" /></a> Last modified by Daniel M. Zimmerman on 
+22 January 2022<br />
 </address>
 </body>
 </html>

@@ -1,11 +1,8 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 
-# $Id$
-
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.7
-# Copyright (C) 2002-2010 TFF Enterprises
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.8
+# Copyright (C) 2002-2022 TFF Enterprises
 # Written by Daniel M. Zimmerman
-# All Rights Reserved
 #
 # This CommuniGate Pro filter uses SpamAssassin technology to scan messages
 # being transferred by the mail server. It has two primary operating modes, 
@@ -122,7 +119,7 @@ $SIG{'HUP'} = \&signalHUP;
 
 # Version string for this filter.
 
-our $VERSION = "1.7";
+our $VERSION = "1.8";
 
 # Version information header to be added to messages (includes platform,
 # perl version, hostname; primarily used for debugging)
@@ -1540,7 +1537,8 @@ sub process_file
   my %custom_recipient_accts = ();
   my %custom_recipient_dirs = ();
   my @remote_recipients;
-      
+  my @list_recipients;
+
   # ensure the queue file exists
   
   chomp($filename);
@@ -1685,6 +1683,18 @@ sub process_file
                 $all_destination = 1;
               }
                   
+              if ($module eq "LIST" && $dma_mailbox ne "group")
+              {
+                # this is a real mailing list (as opposed to a group), so
+                # add it to list_recipients so we can check for
+                # backscatter later
+
+                debug(7, "mailing list address detected, adding for " .
+                         "later backscatter check");
+                push(@list_recipients, $host);  
+                # $host is the already-routed address here
+              }
+
               if ($domain_conf->{use_cgpsa} && !$all_destination &&
                   !(($module eq "LIST") && !$domain_conf->{list_scan}))
               {
@@ -1938,7 +1948,119 @@ sub process_file
   close(MSGFILE);
   
   # Now determine our course of action
-  # First count the number of recipients using default SpamAssassin prefs
+
+  # First, see if this is a bad mailing list message that would cause 
+  # backscatter; if so, we reject it immediately
+
+  if ($root_conf->{prevent_backscatter})
+  {
+    foreach (@list_recipients)
+    {
+      my $list_address = $_;
+
+      # get information about the list
+      
+      my $list_settings;
+      if ($list_settings = $cli->GetList($list_address))
+      {
+        # we've read the list settings correctly
+      }
+      else
+      {
+        # this should never happen because we got routed to the list, 
+        # but if it does, let's play it safe and abort message processing
+        if ($cli)
+        {
+          $cli->Logout();
+          undef $cli;
+        }
+        debug(4, "Rejecting message to mailing list " . $list_address . 
+                 " because list info is unavailable.");
+        printResult("ERROR \"could not get mailing list information for " . 
+                    $list_address . "\"");
+        return;
+      }
+
+      # if the return path is the list owner, allow the message
+      
+      my $return_path_route = undef;
+
+      if ($root_conf->{route_mail_extension})
+      {
+        $return_path_route = $cli->Route("\"$return_path\" MAIL");
+      }
+      else
+      {
+        $return_path_route = $cli->Route("\"$return_path\"");
+      }
+
+      if (defined($return_path_route) && 
+          ($return_path_route->[0] eq "LOCAL") && 
+          ($return_path_route->[1] eq %$list_settings{"Owner"})) 
+      {
+        debug(4, "Accepting message to mailing list " . $list_address . 
+                 " from owner.");
+        next;
+      }
+
+      # if the list only allows posting from the owner, reject the message
+
+      if (%$list_settings{"Postings"} eq "from owner")
+      {
+        if ($cli)
+        {
+          $cli->Logout();
+          undef $cli;
+        }
+        debug(4, "Rejecting message to mailing list " . $list_address . 
+                 " from unauthorized poster " . $return_path);
+        printResult("ERROR \"you are not authorized to post to this mailing list\"");
+        return;
+      }
+
+      # if the list allows postings from "anybody" or "moderate guests", 
+      # allow the message
+
+      if ((%$list_settings{"Postings"} eq "anybody") ||
+          (%$list_settings{"Postings"} eq "moderate guests")) 
+      {
+        debug(4, "Accepting message to mailing list " . $list_address . 
+                 " with permissive post policy.");
+        next;
+      }
+
+      # check the subscription status
+
+      my $subscriber_info = $cli->GetSubscriberInfo($list_address, $return_path);
+      if (%$subscriber_info{"ConfirmationID"} &&
+          (%$subscriber_info{"posts"} ne "prohibited"))
+      {
+        # at this point, it's a legit mailing list subscriber that isn't 
+        # prohibited from posting
+
+        debug(4, "Accepting message to mailing list " . $list_address . 
+                 " from authorized poster " . $return_path);
+        next;
+      }
+
+      # if we reach here, either we got no subscriber info, 
+      # or the subscriber was prohibited
+
+      if ($cli)
+      {
+        $cli->Logout();
+        undef $cli;
+      }
+
+      debug(4, "Rejecting message to mailing list " . $list_address .
+               " from unauthorized poster " . $return_path);
+      printResult("ERROR \"you are not authorized to post to this mailing list\"");
+      return;
+    } 
+  }
+
+  # If we've made it this far, count the number of recipients using 
+  # default SpamAssassin prefs
   
   my $default_recipient_count = 0;
   foreach my $domain_name (keys %default_recipients)
@@ -2344,7 +2466,8 @@ sub loadRootConfig
   $root_conf->{use_c_locale} = 1;
   $root_conf->{redirect_stderr} = 1;
   $root_conf->{absolute_queue_filenames} = 0;
- #$root_conf->{route_mail_extension} set at runtime initialization
+  $root_conf->{prevent_backscatter} = 1;
+  # root_conf->{route_mail_extension} set at runtime initialization
 
   # load root configuration file
   
@@ -2786,9 +2909,13 @@ sub readConfigFile
     {
       $conf->{sa_local_rules_dir} = $1;
     }
-   elsif ($line =~ /^absolute[-_]queue[-_]filenames[\s\=]+(\S+)$/) 
+    elsif ($line =~ /^absolute[-_]queue[-_]filenames[\s\=]+(\S+)$/) 
     {
       $conf->{absolute_queue_filenames} = evaluateBoolean($1);
+    }
+    elsif ($line =~ /^prevent[-_]backscatter[\s\=]+(\S+)$/)
+    {
+      $conf->{prevent_backscatter} = evaluateBoolean($1);
     }
   }
 
