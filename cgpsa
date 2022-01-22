@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 
-# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.8
+# CGPSA - A Spam Filter for CommuniGate Pro - Version 1.8.1
 # Copyright (C) 2002-2022 TFF Enterprises
 # Written by Daniel M. Zimmerman
 #
@@ -1683,10 +1683,10 @@ sub process_file
                 $all_destination = 1;
               }
                   
-              if ($module eq "LIST" && $dma_mailbox ne "group")
+              if ($module eq "LIST" && $dma_mailbox eq "submit")
               {
-                # this is a real mailing list (as opposed to a group), so
-                # add it to list_recipients so we can check for
+                # this is a submission to a real mailing list (as opposed to a group), 
+                # so add it to list_recipients so we can check for
                 # backscatter later
 
                 debug(7, "mailing list address detected, adding for " .
