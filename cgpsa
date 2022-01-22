@@ -1685,9 +1685,9 @@ sub process_file
                   
               if ($module eq "LIST" && $dma_mailbox eq "submit")
               {
-                # this is a submission to a real mailing list (as opposed to a group), 
-                # so add it to list_recipients so we can check for
-                # backscatter later
+                # this is a submission to a real mailing list (as opposed 
+                # to a group), so add it to list_recipients so we can check 
+                # for backscatter later
 
                 debug(7, "mailing list address detected, adding for " .
                          "later backscatter check");
