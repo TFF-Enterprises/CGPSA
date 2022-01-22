@@ -192,20 +192,23 @@ step for details).<br/><br/></li>
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must install the <a
 href="http://www.communigate.com/CGPerl/">CommuniGate Pro CLI Perl
-Module</a>, <a href="http://search.cpan.org/search?module=CGP::CLI">CGP::CLI</a>. You
-can install it from CPAN directly, and it should take care of all its
-dependencies. Alternatively, you can copy <code>CLI.pm</code> to any of 
-your system's Perl @INC directories, or just place it in the directory 
-where you've installed <code>cgpsa</code>. CGP::CLI requires the <a
+Module</a>, <a
+href="http://search.cpan.org/search?module=CGP::CLI">CGP::CLI</a>. You
+can install it from <a href="http://www.cpan.org/">CPAN</a> directly,
+and it should take care of all its dependencies. Alternatively, a
+version of <code>CLI.pm</code> is included with the CGPSA distribution;
+you can copy it to any of your system's Perl @INC directories, or just
+place it in the directory where you've installed the <code>cgpsa</code>
+script. CGP::CLI requires the <a
 href="http://search.cpan.org/search?module=Digest::MD5">Digest::MD5</a>
 Perl module; if you do not have it installed on your system, download
 and install it (or use the <a href="http://www.cpan.org/">CPAN</a>
 module to install it). If you have installed other scripts on your
 system that require the CommuniGate Pro CLI, you may already have
-installed CGP::CLI; you do not need to reinstall it for
-CGPSA, though you should ensure that it's a recent version. If you are
-running in headers-only mode, or in full-featured mode without the CLI,
-you need not install CGP::CLI for CGPSA to function.<br/><br/></li>
+installed CGP::CLI; you do not need to reinstall it for CGPSA, though
+you should ensure that it's a recent version. If you are running in
+headers-only mode, or in full-featured mode without the CLI, you need
+not install CGP::CLI for CGPSA to function.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must create a CommuniGate Pro account with PWD access (as
@@ -408,16 +411,15 @@ to mailing lists from unauthorized addresses.</li>
 </ul>
 <p>Minor Changes</p>
 <ul>
-<li>CLI.pm is no longer included in the CGPSA distribution, because it is
-easily available <a href="http://search.cpan.org/search?module=CGP::CLI">on 
-CPAN</a>.</li>
 
-<li>Changed the Perl path at the top of the script to 
+<li>Changed the Perl path at the top of the CGPSA script to 
 <code>/usr/local/bin/perl</code>, to better reflect the reality of the way
 Perl is packaged on most systems these days.</li>
 
 <li>Cleaned up the documentation to reflect the current URLs for various
 referenced products (amazing how things change in a decade).</li>
+
+<li>Updated the version of CLI.pm included in the CGPSA distribution.</li>
 
 </ul>
 
