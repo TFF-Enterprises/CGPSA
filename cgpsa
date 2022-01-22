@@ -1,9 +1,8 @@
 #!/usr/local/bin/perl
 
 # CGPSA - A Spam Filter for CommuniGate Pro - Version 1.8
-# Copyright (C) 2002-2021 TFF Enterprises
+# Copyright (C) 2002-2022 TFF Enterprises
 # Written by Daniel M. Zimmerman
-# All Rights Reserved
 #
 # This CommuniGate Pro filter uses SpamAssassin technology to scan messages
 # being transferred by the mail server. It has two primary operating modes, 

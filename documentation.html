@@ -8,15 +8,14 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.7</h1>
-<h2>Copyright &copy; 2002-2010 TFF Enterprises<br/>
-Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a><br/>
-All Rights Reserved</h2>
+<h1>CGPSA - A Spam Filter for <a href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.8</h1>
+<h2>Copyright &copy; 2002-2022 TFF Enterprises<br/>
+Written by <a href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a></h2>
 
 <p>CGPSA works in concert with <a
-href="http://www.spamassassin.org/">SpamAssassin</a>&trade; software
+href="http://spamassassin.apache.org/">SpamAssassin</a>&trade; software
 to scan email messages distributed by a <a
-href="http://www.stalker.com/CommuniGatePro/">CommuniGate&reg;
+href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg;
 Pro</a> server. The filter works efficiently, by directly using
 the SpamAssassin API. It does not rely on a daemon process such as
 spamd or on the execution of shell scripts (as the usual process for
@@ -26,11 +25,16 @@ be used with multiple CommuniGate Pro enqueuer threads.</p>
 <p>CGPSA supports all features of SpamAssassin, including such
 functionality as the use of <a
 href="http://razor.sourceforge.net/">Razor</a>, <a
-href="http://www.rhyolite.com/anti-spam/dcc/">DCC</a>, Bayesian
+href="http://rhyolite.com/dcc/">DCC</a>, Bayesian
 learning, and auto-whitelists. All these features are controlled through
 SpamAssassin's regular configuration files. For more information on
 SpamAssassin features and configuration, see the SpamAssassin <a
-href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
+href="http://spamassassin.apache.org/doc.html">documentation</a>.</p>
+
+<p>CGPSA also can also attempt to minimize backscatter from the
+CommuniGate Pro mailing list module, which lacks backscatter reduction
+features itself. See the documentation in the configuration file for more 
+details.</p>
 
 <h3>Downloads</h3> 
 
@@ -38,10 +42,12 @@ href="http://www.spamassassin.org/doc.html">documentation</a>.</p>
 from <a href="http://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 http://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a>, 
-released 9 May 2010.</p>
+href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8.tgz">1.8</a>, 
+released 22 January 2022.</p>
 
 <p>There is no current testing version of CGPSA.</p>
+
+<p>Source code is available on <a href="https://github.com/TFF-Enterprises/CGPSA">GitHub</a>.</p>
 
 <h2>Documentation</h2>
 
@@ -119,7 +125,7 @@ messages to remote servers.</p>
 <ol>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
-<li><a href="http://www.spamassassin.org/">SpamAssassin</a> version 3.0 or higher</li>
+<li><a href="http://spamassassin.apache.org/">SpamAssassin</a> version 3.0 or higher</li>
 <li>Additional Perl modules as required by the configuration options you 
 choose for CGPSA and SpamAssassin (described in the installation steps 
 below and in SpamAssassin's documentation).</li>
@@ -137,7 +143,7 @@ href="#bugs">Bug Reports, Feature Requests and the Like</a>).</p>
 
 <ol>
 
-<li>Install <a href="http://www.spamassassin.org/">SpamAssassin</a> on
+<li>Install <a href="http://spamassassin.apache.org/">SpamAssassin</a> on
 your system. The way to do this is platform dependent - on FreeBSD, for
 example, you might use the FreeBSD Ports system. Also install any
 auxiliary programs you want SpamAssassin to use, such as Razor and DCC.
@@ -185,21 +191,21 @@ step for details).<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must install the <a
-href="http://www.stalker.com/CGPerl/">CommuniGate Pro CLI Perl
-Module</a>, <code>CLI.pm</code>. A version of <code>CLI.pm</code> is
-included with the CGPSA distribution. You can copy it to any of your
-system's Perl @INC directories, or just place it in the directory where
-you've installed <code>cgpsa</code>. <code>CLI.pm</code> requires the <a
+href="http://www.communigate.com/CGPerl/">CommuniGate Pro CLI Perl
+Module</a>, <a href="http://search.cpan.org/search?module=CGP::CLI">CGP::CLI</a>. You
+can install it from CPAN directly, and it should take care of all its
+dependencies. Alternatively, you can copy <code>CLI.pm</code> to any of 
+your system's Perl @INC directories, or just place it in the directory 
+where you've installed <code>cgpsa</code>. CGP::CLI requires the <a
 href="http://search.cpan.org/search?module=Digest::MD5">Digest::MD5</a>
 Perl module; if you do not have it installed on your system, download
 and install it (or use the <a href="http://www.cpan.org/">CPAN</a>
 module to install it). If you have installed other scripts on your
 system that require the CommuniGate Pro CLI, you may already have
-installed <code>CLI.pm</code>; you do not need to reinstall it for
+installed CGP::CLI; you do not need to reinstall it for
 CGPSA, though you should ensure that it's a recent version. If you are
 running in headers-only mode, or in full-featured mode without the CLI,
-you need not install <code>CLI.pm</code> for CGPSA to
-function.<br/><br/></li>
+you need not install CGP::CLI for CGPSA to function.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, you must create a CommuniGate Pro account with PWD access (as
@@ -208,11 +214,12 @@ specified in your <code>cgpsa.conf</code>. This user must have
 administrative access to all the domains for which you will be using
 CGPSA (the easiest way to do this is to give it access to "modify and
 monitor everything"; at minimum, it should have access to modify "server
-and module settings" and "all domains and accounts settings"). Enable a
-number of PWD connections greater than the number of enqueuer threads
-used by your server. See the configuration file for details. If you are
-running in headers-only mode, or in full-featured mode without the CLI,
-you need not create an account for PWD access.<br/><br/></li>
+and module settings" and "all domains and accounts settings", but it needs
+access to "do everything" in order to modify the temporary blacklist). 
+Enable a number of PWD connections greater than the number of enqueuer 
+threads used by your server. See the configuration file for details. If 
+you are running in headers-only mode, or in full-featured mode without 
+the CLI, you need not create an account for PWD access.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
 enabled, and your CommuniGate Pro setup has IP addresses specifically
@@ -289,12 +296,12 @@ much of it isn't too useful).</p>
 
 <h3 id="upgrading">Upgrading</h3>
 
-<p>To upgrade from a previous version of CGPSA, perform the following steps:</p>
+<p>To upgrade from a previous version of CGPSA, perform the following 
+steps:</p>
 
 <ol>
 
-<li>Copy the new <code>cgpsa</code> and <code>CLI.pm</code> over the
-ones you currently have installed.<br/><br/></li>
+<li>Copy the new <code>cgpsa</code> over the one you currently have installed.<br/><br/></li>
 
 <li>Compare the configuration file (<code>cgpsa.conf</code>) that came
 with the new CGPSA to the configuration file you currently have
@@ -309,9 +316,9 @@ described in step 6 of the installation instructions and in the included
 <li>Restart CGPSA. There are two ways to do this. If you have
 "Auto-Restart" enabled for CGPSA in the CommuniGate Pro "Helper
 Settings", you can manually kill the running CGPSA process(es); this
-done with a command such as <code>killall cgpsa</code> (on Linux) or
+is done with a command such as <code>killall cgpsa</code> (on Linux) or
 <code>pkill cgpsa</code> (on Solaris), or through a graphical interface
-such as Mac OS X's "Activity Monitor" or Windows' "Task Manager". If you
+such as macOS's "Activity Monitor" or Windows' "Task Manager". If you
 cannot kill the running CGPSA processes, you can restart CGPSA using the
 "Helper Settings" page of the CommuniGate Pro web administration
 interface. In the "Content Filtering" section you made for CGPSA,
@@ -348,15 +355,12 @@ your own risk.</p>
 
 <h3 id="license">License and Fees</h3>
 
-<p>CGPSA is non-commercial software, even though it has similar functionality to some existing commercial products. If you find it useful, feel free to send me something for it (email <a href="cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a> if you need information on how to do so). I also do CGPSA installations on a flat-fee basis.</p>
+<p>CGPSA is non-commercial software, even though it has similar functionality
+to some existing commercial products. If you find it useful, feel free to 
+send me something for it (email <a href="cgpsa@tffenterprises.com">cgpsa@tffenterprises.com</a> if you need information on how to do so). I also do CGPSA installations on a flat-fee basis.</p>
 
-<p>Another way to provide some support for CGPSA's development is to do your <a href="http://www.tffenterprises.com/amazon/">Amazon.com</a> shopping via the link in this sentence.</p>
-
-<p>CGPSA is not to be redistributed without explicit
-permission. Its source code may not be used in any other products, in
-verbatim or modified form, whether or not the product is open-source.
-You may of course modify the source code in any way you like for use on
-your own system.</p>
+<p>CGPSA is licensed under the 3-Clause BSD License. See the
+<code>LICENSE.md</code> file for details.</p>
 
 <hr/>
 
@@ -384,6 +388,53 @@ file).</p>
 <h3 id="history">Revision History</h3>
 
 <dl>
+
+<dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8.tgz">1.8</a> - 22 January 2022</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>CGPSA has been licensed under the 3-Clause BSD License.</li>
+
+<li>CGPSA has been verified to work with current versions of SpamAssassin
+(which is up to version 3.4.6 as of this writing).</li>
+
+<li>Added an option to prevent backscatter from CommunGate Pro mailing lists
+("prevent_backscatter"). This only works if CGPSA is run in a synchronous
+server-wide rule (see the option documentation for details), and should 
+eliminate backscatter that results from the LIST module bouncing email sent
+to mailing lists from unauthorized addresses.</li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+<li>CLI.pm is no longer included in the CGPSA distribution, because it is
+easily available <a href="http://search.cpan.org/search?module=CGP::CLI">on 
+CPAN</a>.</li>
+
+<li>Changed the Perl path at the top of the script to 
+<code>/usr/local/bin/perl</code>, to better reflect the reality of the way
+Perl is packaged on most systems these days.</li>
+
+<li>Cleaned up the documentation to reflect the current URLs for various
+referenced products (amazing how things change in a decade).</li>
+
+</ul>
+
+<p>Bug Fixes</p>
+<ul>
+
+<li>None</li>
+
+</ul>
+
+<p>Known Issues</p>
+<ul>
+
+<li>Same as for Version 1.7 (all carried forward from Version 1.1)</li>
+
+</ul>
+</dd>
 
 <dt><a href="http://www.tffenterprises.com/cgpsa/releases/cgpsa-1_7.tgz">1.7</a> - 9 May 2010</dt>
 <dd>
@@ -1073,16 +1124,17 @@ the easiest things in the world to maintain).</p>
 
 <h3 id="legal">Legal Stuff</h3>
 
-<p>CommuniGate is a registered trademark of Stalker Software, Inc.</p>
+<p>CommuniGate is a registered trademark of CommuniGate Systems.</p>
+<p>CGPSA is licensed under the 3-clause BSD license; see the 
+<code>LICENSE.md</code> file in the CGPSA distribution for more details.</p> 
 
 <hr/>
 
 <address><a
 href="http://validator.w3.org/check/referer"><img
 src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!"
-height="31" width="88" /></a> Last modified by <a
-href="http://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a> on 
-9 May 2010<br />
+height="31" width="88" /></a> Last modified by Daniel M. Zimmerman on 
+22 January 2022<br />
 </address>
 </body>
 </html>
