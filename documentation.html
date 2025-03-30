@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="style.css" type="text/css" media="screen" />
 </head>
 <body>
-<h1>CGPSA - A Spam Filter for <a href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.8.2</h1>
-<h2>Copyright &copy; 2002-2023 TFF Enterprises<br/>
+<h1>CGPSA - A Spam Filter for <a href="http://www.communigate.com/CommuniGatePro/">CommuniGate&reg; Pro</a><br/>Version 1.9</h1>
+<h2>Copyright &copy; 2002-2025 TFF Enterprises<br/>
 Written by <a href="https://www.tffenterprises.com/~dmz/">Daniel M. Zimmerman</a></h2>
 
 <p>CGPSA works in concert with <a
@@ -33,17 +33,17 @@ href="http://spamassassin.apache.org/doc.html">documentation</a>.</p>
 
 <p>CGPSA also can also attempt to minimize backscatter from the
 CommuniGate Pro mailing list module, which lacks backscatter reduction
-features itself. See the documentation in the configuration file for more 
+features itself. See the documentation in the configuration file for more
 details.</p>
 
-<h3>Downloads</h3> 
+<h3>Downloads</h3>
 
 <p>The most current (release) version of CGPSA can always be downloaded
 from <a href="https://www.tffenterprises.com/cgpsa/cgpsa.tgz">
 https://www.tffenterprises.com/cgpsa/cgpsa.tgz</a>. The current (release)
 version is <a
-href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8_2.tgz">1.8.2</a>, 
-released 17 June 2023.</p>
+href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_9.tgz">1.9</a>,
+released 17 April 2025.</p>
 
 <p>There is no current testing version of CGPSA.</p>
 
@@ -126,8 +126,8 @@ messages to remote servers.</p>
 <li>CommuniGate Pro version 4.0 or higher (4.1 or higher preferred)</li>
 <li>Perl version 5.6.1 or higher</li>
 <li><a href="http://spamassassin.apache.org/">SpamAssassin</a> version 3.0 or higher</li>
-<li>Additional Perl modules as required by the configuration options you 
-choose for CGPSA and SpamAssassin (described in the installation steps 
+<li>Additional Perl modules as required by the configuration options you
+choose for CGPSA and SpamAssassin (described in the installation steps
 below and in SpamAssassin's documentation).</li>
 </ol>
 
@@ -222,10 +222,10 @@ administrative access to all the domains for which you will be using
 CGPSA (the easiest way to do this is to give it access to "modify and
 monitor everything"; at minimum, it should have access to modify "server
 and module settings" and "all domains and accounts settings", but it needs
-access to "do everything" in order to modify the temporary blacklist). 
-Enable a number of PWD connections greater than the number of enqueuer 
-threads used by your server. See the configuration file for details. If 
-you are running in headers-only mode, or in full-featured mode without 
+access to "do everything" in order to modify the temporary blacklist).
+Enable a number of PWD connections greater than the number of enqueuer
+threads used by your server. See the configuration file for details. If
+you are running in headers-only mode, or in full-featured mode without
 the CLI, you need not create an account for PWD access.<br/><br/></li>
 
 <li>If you are running CGPSA in its full-featured mode with CLI usage
@@ -305,12 +305,12 @@ much of it isn't too useful).</p>
 
 <h3 id="upgrading">Upgrading</h3>
 
-<p>To upgrade from a previous version of CGPSA, perform the following 
+<p>To upgrade from a previous version of CGPSA, perform the following
 steps:</p>
 
 <ol>
 
-<li>Copy the new <code>cgpsa</code> over the one you currently have 
+<li>Copy the new <code>cgpsa</code> over the one you currently have
 installed.<br/><br/></li>
 
 <li>Compare the configuration file (<code>cgpsa.conf</code>) that came
@@ -402,12 +402,38 @@ file).</p>
 
 <dl>
 
+<dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_9.tgz">1.9</a> - 17 April 2025</dt>
+<dd>
+<p>Major Changes</p>
+<ul>
+
+<li>Added support for generating an "X-Junk-Score" header for use in CGP's
+"simplified junk configuration" (requested in
+<a href="https://github.com/CGPSA/issues/5">https://github.com/CGPSA/issues/5</a>).
+This is primarily useful for headers-only mode, but can also be used in
+full featured mode. See the new configuration options for details.
+</li>
+
+<li>CGPSA has been verified to work with current versions of SpamAssassin
+  (which is up to version 4.0.1 as of this writing).
+</li>
+
+</ul>
+<p>Minor Changes</p>
+<ul>
+
+<li>Changed the Perl path at the top of the CGPSA script to
+<code>/usr/bin/env perl</code>, to better reflect the reality of the way
+Perl is packaged on most systems these days.</li>
+</ul>
+</dd>
+
 <dt><a href="https://www.tffenterprises.com/cgpsa/releases/cgpsa-1_8_2.tgz">1.8.2</a> - 17 June 2023</dt>
 <dd>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed some Perl syntax that did not work properly with more recent versions of Perl. (https://github.com/TFF-Enterprises/CGPSA/issues/3).</li>
+<li>Fixed some Perl syntax that did not work properly with more recent versions of Perl. (<a href="https://github.com/TFF-Enterprises/CGPSA/issues/3">https://github.com/TFF-Enterprises/CGPSA/issues/3</a>).</li>
 </ul>
 </dd>
 
@@ -434,7 +460,7 @@ backscatter prevention enabled.</li>
 
 <li>Added an option to prevent backscatter from CommunGate Pro mailing lists
 ("prevent_backscatter"). This only works if CGPSA is run in a synchronous
-server-wide rule (see the option documentation for details), and should 
+server-wide rule (see the option documentation for details), and should
 eliminate backscatter that results from the LIST module bouncing email sent
 to mailing lists from unauthorized addresses.</li>
 
@@ -442,7 +468,7 @@ to mailing lists from unauthorized addresses.</li>
 <p>Minor Changes</p>
 <ul>
 
-<li>Changed the Perl path at the top of the CGPSA script to 
+<li>Changed the Perl path at the top of the CGPSA script to
 <code>/usr/local/bin/perl</code>, to better reflect the reality of the way
 Perl is packaged on most systems these days.</li>
 
@@ -596,7 +622,7 @@ changed to 8.<br/><br/></li>
 <p>Changes</p>
 <ul>
 
-<li>Added the ability to create a CGPSA domain configuration file for the 
+<li>Added the ability to create a CGPSA domain configuration file for the
 CommuniGate Pro main domain.</li>
 
 <li>Changed the filename for domain configuration files from "cgpsa.conf" to
@@ -612,7 +638,7 @@ release, but will not work in version 1.4.<br/><br/></li>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed an issue where user SpamAssassin preferences would not be loaded 
+<li>Fixed an issue where user SpamAssassin preferences would not be loaded
 if there were no corresponding user CGPSA preferences.<br/><br/></li>
 
 </ul>
@@ -700,13 +726,13 @@ domain, and user levels.</li>
 <ul>
 
 <li>If "direct_mailbox_rewrite" is enabled, CGPSA now checks to be sure
-that account detailing is enabled on the server before rewriting 
+that account detailing is enabled on the server before rewriting
 addresses.</li>
 
 <li>Log level assignment has been changed throughout CGPSA to make the
-range of log levels more useful. A log level of 5 is sufficient for 
+range of log levels more useful. A log level of 5 is sufficient for
 "spam"/"non-spam" reports to make it into the CommuniGate Pro log; a log
-level of 8 is sufficient to provide all but the most detailed debugging 
+level of 8 is sufficient to provide all but the most detailed debugging
 log information.</li>
 
 </ul>
@@ -738,10 +764,10 @@ if the CLI.pm perl module was installed in certain locations.<br/><br/></li>
 
 <li>Fixed documentation of "direct_mailbox_rewrite" to indicate that the
 rewrite happens before the decision to scan mail rather than after (and that
-therefore, if "direct_mailbox_rewrite" is on, "direct_mailbox_scan" is 
+therefore, if "direct_mailbox_rewrite" is on, "direct_mailbox_scan" is
 superfluous).</li>
 
-<li>Fixed direct mailbox address processing. Previously, the "direct_mailbox_rewrite" option would have caused mail to bounce, because instead of rewriting the address "mailbox#account@domain" as "account+mailbox@domain", it would rewrite it as "mailbox+account@domain".</li> 
+<li>Fixed direct mailbox address processing. Previously, the "direct_mailbox_rewrite" option would have caused mail to bounce, because instead of rewriting the address "mailbox#account@domain" as "account+mailbox@domain", it would rewrite it as "mailbox+account@domain".</li>
 
 <li>Fixed a problem where a log entry did not get properly pluralized when
 necessary.<br/><br/></li>
@@ -768,11 +794,11 @@ filesystem.<br/><br/></li>
 <p>Changes</p>
 <ul>
 
-<li>Added the ability to specify a path ("helper_path") to helper 
-applications, such as DCC and Pyzor, that can be used by SpamAssassin. 
+<li>Added the ability to specify a path ("helper_path") to helper
+applications, such as DCC and Pyzor, that can be used by SpamAssassin.
 Previously, these applications could not be used with CGPSA.</li>
 
-<li>Documented a previously-existing undocumented configuration option 
+<li>Documented a previously-existing undocumented configuration option
 ("helper_state_dir") that allows CGPSA to use a different directory for
 the state of helper applications, such as Razor, DCC and Pyzor, than the
 default home directory, when user preferences are not being used.</li>
@@ -796,14 +822,14 @@ in 1.2.4, to improve readability.<br/><br/></li>
 <li>Added logic to ensure that CGPSA never tries to pass CommuniGate
 additional headers longer than 4096 characters in headers-only mode.</li>
 
-<li>Added a configuration option to turn on SpamAssassin's internal 
+<li>Added a configuration option to turn on SpamAssassin's internal
 debugging (it is off by default).</li>
 
 </ul>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed the reading of numeric settings (such as "max_requests" and 
+<li>Fixed the reading of numeric settings (such as "max_requests" and
 "debug_level") from the configuration file.</li>
 
 <li>Fixed a bug where a data structure that tracked child processes could
@@ -819,7 +845,7 @@ usage explosions in previous versions of CGPSA.<br/><br/></li>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Removed an unintentional dependency on Time::HiRes that was introduced 
+<li>Removed an unintentional dependency on Time::HiRes that was introduced
 in version 1.2.2 (and caused CGPSA to crash).<br/><br/></li>
 
 </ul>
@@ -842,7 +868,7 @@ into SpamAssassin.pm.</li>
 for SpamAssassin processing.</li>
 
 <li>Perl 5.6.1 is now required to use CGPSA. This prevents various bugs
-in Perl 5.6.0 from affecting CGPSA's text processing.</li> 
+in Perl 5.6.0 from affecting CGPSA's text processing.</li>
 
 </ul>
 <p>Bug Fixes</p>
@@ -874,7 +900,7 @@ users).<br/><br/></li>
 <ul>
 
 <li>Perl 5.6.0 or higher is now required to run CGPSA (this was
-unintentionally the case before, but CGPSA will die with a much more 
+unintentionally the case before, but CGPSA will die with a much more
 intuitive message now)</li>
 
 <li>SpamAssassin 2.5 or higher is now required to run CGPSA.</li>
@@ -909,15 +935,15 @@ CGPSA.</li>
 <p>Changes</p>
 <ul>
 
-<li>Parallel requests mode is now turned on by default on non-Windows 
+<li>Parallel requests mode is now turned on by default on non-Windows
 platforms.</li>
 
-<li>Modified the processing of message headers to preserve more 
+<li>Modified the processing of message headers to preserve more
 information about the Envelope-To addresses.</li>
 
-<li>Added the ability to specify a list of destination domains that should 
-always have their mail scanned, with the "scan_domains" setting. This makes 
-it possible to use CGP as a relay/gateway server (to filter and process 
+<li>Added the ability to specify a list of destination domains that should
+always have their mail scanned, with the "scan_domains" setting. This makes
+it possible to use CGP as a relay/gateway server (to filter and process
 email for other domains).</li>
 
 <li>Added date/time stamp to the standard error output generated by
@@ -925,26 +951,26 @@ CGPSA. Output generated by other Perl code (such as SpamAssassin) is not
 date/time stamped.</li>
 
 <li>Changed CGPSA's output functions to wrap lines to a reasonable number of
-characters (around 150), to work around the CommuniGate log line length 
+characters (around 150), to work around the CommuniGate log line length
 limit.</li>
 
-<li>Added signal handling: if the main CGPSA process receives a HUP, it 
+<li>Added signal handling: if the main CGPSA process receives a HUP, it
 reloads all of its own and SpamAssassin's preferences before processing
 the next CLI command it receives.</li>
 
-<li>Partially worked around the behavior whereby, when parallel_requests is 
-off and use_user_prefs is on, users' SpamAssassin preferences get "stacked" 
-on top of each other. Now, the SpamAssassin preferences in the default home 
-directory are loaded before each set of user preferences, so they are 
-"stacked" on top of the user prefs; this means that, if the default 
-preferences file contains explicit settings for every parameter changed in a 
-user preference file, SpamAssassin will return to these defaults between 
+<li>Partially worked around the behavior whereby, when parallel_requests is
+off and use_user_prefs is on, users' SpamAssassin preferences get "stacked"
+on top of each other. Now, the SpamAssassin preferences in the default home
+directory are loaded before each set of user preferences, so they are
+"stacked" on top of the user prefs; this means that, if the default
+preferences file contains explicit settings for every parameter changed in a
+user preference file, SpamAssassin will return to these defaults between
 users.</li>
 
 <li>Worked around SpamAssassin's problem with extremely large messages, by
 only scanning the first 250K of each message.</li>
 
-<li>Changed the location of the per-user configurations used by CGPSA (old 
+<li>Changed the location of the per-user configurations used by CGPSA (old
 configurations will automatically be moved to the new location).</li>
 
 </ul>
@@ -957,7 +983,7 @@ will almost definitely trigger the SpamAssassin rule
 cross the spam threshold, but it is a possibility.</li>
 
 <li>When CGPSA catches a HUP signal and reloads its preferences, it leaks
-some memory (as a result of the old SpamAssassin, or parts thereof, not 
+some memory (as a result of the old SpamAssassin, or parts thereof, not
 going away). This cannot be fixed with the current version of SpamAssassin;
 work is underway on a patch to SpamAssassin to enable a fix.</li>
 
@@ -974,8 +1000,8 @@ limitations in the older Text::Wrap code.<br/><br/></li>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed an issue with the generation of random filenames that could have, 
-on certain systems, resulted in message loss when using parallel 
+<li>Fixed an issue with the generation of random filenames that could have,
+on certain systems, resulted in message loss when using parallel
 requests.<br/><br/></li>
 
 </ul>
@@ -997,7 +1023,7 @@ back and forth.</li>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have 
+<li>Fixed a bug where mail for "all@" and "alldomains@" addresses could have
 been delivered when it shouldn't have been. Mail to "all@" and "alldomains@"
 addresses is now scanned in ADDHEADER mode, to preserve CGP's security
 model for such mail.<br/><br/></li>
@@ -1016,7 +1042,7 @@ error output to a file rather than to standard error. This solves a
 problem that would cause the filter to hang on certain operating
 systems (including Mac OS X).</li>
 
-<li>Added information to log output about the paths to the SpamAssassin 
+<li>Added information to log output about the paths to the SpamAssassin
 settings files being used; the path to the default settings file is output
 at filter startup time, and the paths to user settings files are output
 when those files are used.</li>
@@ -1040,24 +1066,24 @@ accurately reflect its default value.<br/><br/></li>
 <p>Changes</p>
 <ul>
 
-<li>Added some extra debugging output in various places, including 
+<li>Added some extra debugging output in various places, including
 printing of the preferences file location and the SpamAssassin version
 at startup.</li>
 
-<li>Added support for the new "Route Mail" CLI command option (for 
+<li>Added support for the new "Route Mail" CLI command option (for
 CommuniGate 4.1b3 and higher; compatibility is auto-detected).</li>
 
 </ul>
 <p>Bug Fixes</p>
 <ul>
 
-<li>Fixed a problem where mail to the "all@" and "alldomains" 
+<li>Fixed a problem where mail to the "all@" and "alldomains"
 addresses would be bounced because of routing errors.</li>
 
-<li>Fixed a problem where CGPSA would use root's home directory to 
+<li>Fixed a problem where CGPSA would use root's home directory to
 store SpamAssassin state files in certain configurations.</li>
 
-<li>Fixed a problem where the "cgp_hostname" setting was not being 
+<li>Fixed a problem where the "cgp_hostname" setting was not being
 read from the configuration file.<br/><br/></li>
 
 </ul>
@@ -1157,14 +1183,14 @@ the easiest things in the world to maintain).</p>
 <h3 id="legal">Legal Stuff</h3>
 
 <p>CommuniGate is a registered trademark of CommuniGate Systems.</p>
-<p>CGPSA is licensed under the 3-clause BSD license; see the 
-<code>LICENSE.md</code> file in the CGPSA distribution for more details.</p> 
+<p>CGPSA is licensed under the 3-clause BSD license; see the
+<code>LICENSE.md</code> file in the CGPSA distribution for more details.</p>
 
 <hr/>
 
 <address><a href="http://jigsaw.w3.org/css-validator/validator?uri=https%3A%2F%2Fwww.tffenterprises.com%2Fcgpsa%2F"><img src="http://jigsaw.w3.org/css-validator/images/vcss" alt="Valid CSS!" height="31" width="88" /></a>
-<a href="http://validator.w3.org/check?uri=https%3A%2F%2Fwww.tffenterprises.com%2Fcgpsa%2F"><img src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!" height="31" width="88" /></a> Last modified by Daniel M. Zimmerman on 
-22 January 2022<br />
+<a href="http://validator.w3.org/check?uri=https%3A%2F%2Fwww.tffenterprises.com%2Fcgpsa%2F"><img src="http://www.w3.org/Icons/valid-xhtml11" alt="Valid XHTML 1.1!" height="31" width="88" /></a> Last modified by Daniel M. Zimmerman on
+?? April 2025<br />
 </address>
 </body>
 </html>

@@ -1,5 +1,5 @@
-# CGPSA - A Spam Filter for CommuniGate (R) Pro - Version 1.8.1
-## Copyright (C) 2002-2022 TFF Enterprises, Written by Daniel M. Zimmerman
+# CGPSA - A Spam Filter for CommuniGate (R) Pro - Version 1.9
+## Copyright (C) 2002-2025 TFF Enterprises, Written by Daniel M. Zimmerman
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
